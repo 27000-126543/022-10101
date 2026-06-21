@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, Input, ScrollView, Picker } from '@tarojs/components';
-import Taro, { useRouter } from '@tarojs/taro';
+import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
-import { STATUS_LABELS, CustomerStatus, PROJECT_OPTIONS, TIME_SLOTS } from '@/types';
+import { STATUS_LABELS, CustomerStatus, PROJECT_OPTIONS, TIME_SLOTS, FollowUpRecord } from '@/types';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 
@@ -41,14 +41,49 @@ const CustomerDetailPage: React.FC = () => {
     [storeFollowUpRecords, customerId]
   );
 
+  const filteredFollowUpRecords = useMemo(() => {
+    if (followFilter === 'all') return followUpRecords;
+    if (followFilter === 'appointment') {
+      return followUpRecords.filter((r) => r.type === 'reminder' || r.content.includes('预约'));
+    }
+    if (followFilter === 'transaction') {
+      return followUpRecords.filter((r) => r.type === 'other' && r.content.includes('成交'));
+    }
+    if (followFilter === 'referral') {
+      return followUpRecords.filter((r) => r.content.includes('推荐人') || r.content.includes('转介绍'));
+    }
+    if (followFilter === 'normal') {
+      return followUpRecords.filter(
+        (r) => r.type === 'greeting' || r.type === 'case' || r.type === 'discount'
+      );
+    }
+    return followUpRecords;
+  }, [followUpRecords, followFilter]);
+
   const customerTransactions = useMemo(
     () => storeTransactions.filter((t) => t.customerId === customerId),
     [storeTransactions, customerId]
   );
 
+  const referrals = useMemo(
+    () => storeCustomers.filter((c) => c.referrerId === customerId),
+    [storeCustomers, customerId]
+  );
+
+  useEffect(() => {
+    if (highlightApptId && appointments.length > 0) {
+      const timer = setTimeout(() => {
+        setScrollViewId(`appointment-${highlightApptId}`);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightApptId, appointments]);
+
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showReferrerModal, setShowReferrerModal] = useState(false);
+  const [scrollViewId, setScrollViewId] = useState('');
+  const [followFilter, setFollowFilter] = useState<string>('all');
 
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
@@ -212,7 +247,7 @@ const CustomerDetailPage: React.FC = () => {
   };
 
   return (
-    <ScrollView scrollY className={styles.page}>
+    <ScrollView scrollY className={styles.page} scroll-into-view={scrollViewId} scrollWithAnimation>
       <View className={styles.header}>
         <View className={styles.avatar}>
           <Text className={styles.avatarText}>{customer.name.charAt(0)}</Text>
@@ -351,6 +386,7 @@ const CustomerDetailPage: React.FC = () => {
                 return (
                   <View
                     key={appt.id}
+                    id={`appointment-${appt.id}`}
                     className={classnames(
                       styles.appointmentItem,
                       isHighlighted && styles.appointmentItemHighlight
@@ -410,15 +446,40 @@ const CustomerDetailPage: React.FC = () => {
         )}
 
         <View className={styles.card}>
-          <Text className={styles.cardTitle}>
-            <Text className={styles.titleIcon}>📝</Text>跟进记录
-          </Text>
+          <View className={styles.followHeaderRow}>
+            <Text className={styles.cardTitle}>
+              <Text className={styles.titleIcon}>📝</Text>跟进记录
+            </Text>
+            <Text className={styles.followCount}>{followUpRecords.length}条</Text>
+          </View>
+
+          <View className={styles.followFilterBar}>
+            {[
+              { key: 'all', label: '全部' },
+              { key: 'appointment', label: '预约' },
+              { key: 'transaction', label: '成交' },
+              { key: 'referral', label: '转介绍' },
+              { key: 'normal', label: '普通跟进' }
+            ].map((f) => (
+              <View
+                key={f.key}
+                className={classnames(
+                  styles.followFilterItem,
+                  followFilter === f.key && styles.followFilterActive
+                )}
+                onClick={() => setFollowFilter(f.key)}
+              >
+                <Text>{f.label}</Text>
+              </View>
+            ))}
+          </View>
+
           <View className={styles.followHistory}>
-            {followUpRecords.length > 0 ? (
-              followUpRecords.map((record, idx) => (
+            {filteredFollowUpRecords.length > 0 ? (
+              filteredFollowUpRecords.map((record, idx) => (
                 <View key={record.id} className={styles.historyItem}>
                   <View className={styles.historyDot}></View>
-                  {idx < followUpRecords.length - 1 && <View className={styles.historyLine}></View>}
+                  {idx < filteredFollowUpRecords.length - 1 && <View className={styles.historyLine}></View>}
                   <View className={styles.historyContent}>
                     <Text className={styles.historyText}>{record.content}</Text>
                     <Text className={styles.historyMeta}>
@@ -429,7 +490,7 @@ const CustomerDetailPage: React.FC = () => {
               ))
             ) : (
               <View className={styles.emptyHistory}>
-                <Text className={styles.emptyText}>暂无跟进记录，点击下方按钮开始跟进</Text>
+                <Text className={styles.emptyText}>暂无此类跟进记录</Text>
               </View>
             )}
           </View>
@@ -454,6 +515,50 @@ const CustomerDetailPage: React.FC = () => {
             </View>
           )}
         </View>
+
+        {referrals.length > 0 && (
+          <View className={styles.card}>
+            <View className={styles.followHeaderRow}>
+              <Text className={styles.cardTitle}>
+                <Text className={styles.titleIcon}>👥</Text>我推荐的客户
+              </Text>
+              <Text className={styles.followCount}>共 {referrals.length} 人</Text>
+            </View>
+            <View className={styles.referralList}>
+              {referrals.map((ref) => (
+                <View
+                  key={ref.id}
+                  className={styles.referralCustomerItem}
+                  onClick={() => {
+                    setScrollViewId('');
+                    setTimeout(() => {
+                      Taro.redirectTo({
+                        url: `/pages/customer-detail/index?id=${ref.id}`
+                      });
+                    }, 50);
+                  }}
+                >
+                  <View className={styles.referralAvatar}>
+                    <Text className={styles.referralAvatarText}>{ref.name.charAt(0)}</Text>
+                  </View>
+                  <View className={styles.referralCustomerInfo}>
+                    <Text className={styles.referralCustomerName}>{ref.name}</Text>
+                    <Text className={styles.referralCustomerMeta}>
+                      {ref.phone} · {ref.projectPreference.slice(0, 2).join('、')}
+                    </Text>
+                    <View className={styles.referralCustomerTags}>
+                      <Text className={classnames(styles.referralCustomerTag, styles[`status${ref.status.charAt(0).toUpperCase() + ref.status.slice(1)}`])}>
+                        {STATUS_LABELS[ref.status]}
+                      </Text>
+                      {ref.isVip && <Text className={styles.referralVipTag}>VIP</Text>}
+                    </View>
+                  </View>
+                  <Text className={styles.referralArrow}>→</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </View>
 
       <View className={styles.bottomBar}>

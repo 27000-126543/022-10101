@@ -564,6 +564,146 @@
   color: $color-text-tertiary;
 }
 
+.followHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.followCount {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.followFilterBar {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.followFilterItem {
+  padding: 10rpx 24rpx;
+  background: $color-bg-page;
+  border-radius: 100rpx;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.followFilterActive {
+  background: linear-gradient(135deg, $color-primary 0%, $color-secondary 100%);
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+.referralList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.referralCustomerItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, #FFF8F0 0%, #FFF0F6 100%);
+  border-radius: $radius-md;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.referralAvatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-secondary 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.referralAvatarText {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.referralCustomerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.referralCustomerName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+  display: block;
+}
+
+.referralCustomerMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: 8rpx;
+  display: block;
+}
+
+.referralCustomerTags {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+
+.referralCustomerTag {
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+}
+
+.statusNew {
+  background: #E8F0FF;
+  color: #165DFF;
+}
+
+.statusContacted {
+  background: #E8FFEA;
+  color: #00B42A;
+}
+
+.statusPending {
+  background: #FFF7E6;
+  color: #FF7D00;
+}
+
+.statusWakeup {
+  background: #FFECE8;
+  color: #F53F3F;
+}
+
+.referralVipTag {
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  background: linear-gradient(135deg, #FFD700 0%, #FFB800 100%);
+  color: #8B4513;
+  font-weight: $font-weight-semibold;
+}
+
+.referralArrow {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
 .modalOverlay {
   position: fixed;
   top: 0;

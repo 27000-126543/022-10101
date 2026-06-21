@@ -334,6 +334,167 @@
   display: block;
 }
 
+.searchSection {
+  padding: $spacing-md $spacing-lg $spacing-sm;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  background: $color-bg-card;
+  border-radius: 100rpx;
+  padding: $spacing-sm $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.searchIcon {
+  font-size: $font-size-lg;
+}
+
+.searchPlaceholder {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.searchResults {
+  padding: 0 $spacing-lg $spacing-lg;
+}
+
+.searchResultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.searchResultTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.searchResultCount {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.searchResultList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.searchResultItem {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  box-shadow: $shadow-card;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.searchResultMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.searchResultInfo {
+  flex: 1;
+}
+
+.searchResultName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+}
+
+.searchResultPhone {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  display: block;
+  margin-top: 4rpx;
+}
+
+.searchResultDetail {
+  display: flex;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+}
+
+.searchResultProject,
+.searchResultDateTime {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.searchResultRemark {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+.emptySearch {
+  padding: $spacing-xl 0;
+  text-align: center;
+}
+
+.emptySearchIcon {
+  font-size: 80rpx;
+  display: block;
+  margin-bottom: $spacing-sm;
+}
+
+.emptySearchText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.inputOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.inputContainer {
+  background: $color-bg-card;
+  padding: $spacing-md $spacing-lg $spacing-lg;
+}
+
+.inputBox {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-md;
+}
+
+.realInput {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.cancelBtn {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  flex-shrink: 0;
+}
+
 .modalOverlay {
   position: fixed;
   top: 0;

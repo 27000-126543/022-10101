@@ -27,6 +27,8 @@ const AppointmentPage: React.FC = () => {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [weekStartOffset, setWeekStartOffset] = useState(0);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [showSearchInput, setShowSearchInput] = useState(false);
 
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
@@ -52,6 +54,35 @@ const AppointmentPage: React.FC = () => {
   }, [appointments, weekStartOffset]);
 
   const selectedDate = weekDays[selectedDateIndex].date;
+
+  const todayStr = today.toISOString().split('T')[0];
+  const searchResults = useMemo(() => {
+    if (!searchKeyword.trim()) return [];
+    const kw = searchKeyword.toLowerCase().trim();
+
+    const matchedCustomerIds = storeCustomers
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(kw) ||
+          c.phone.includes(kw) ||
+          c.projectPreference.some((p) => p.includes(kw))
+      )
+      .map((c) => c.id);
+
+    return appointments
+      .filter(
+        (a) =>
+          matchedCustomerIds.includes(a.customerId) ||
+          a.project.includes(kw) ||
+          a.customerName.toLowerCase().includes(kw) ||
+          a.customerPhone.includes(kw)
+      )
+      .filter((a) => a.status !== 'cancelled')
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.time.localeCompare(b.time);
+      });
+  }, [searchKeyword, appointments, storeCustomers]);
 
   const filteredAppointments = useMemo(() => {
     let result = appointments.filter((a) => a.date === selectedDate);
@@ -197,7 +228,64 @@ const AppointmentPage: React.FC = () => {
 
   return (
     <ScrollView scrollY className={styles.page}>
-      <View className={styles.dateSection}>
+      <View className={styles.searchSection}>
+        <View className={styles.searchBar} onClick={() => setShowSearchInput(true)}>
+          <Text className={styles.searchIcon}>🔍</Text>
+          <Text className={styles.searchPlaceholder}>
+            {searchKeyword || '搜索客户姓名、电话、预约项目'}
+          </Text>
+        </View>
+      </View>
+
+      {searchKeyword.trim() ? (
+        <View className={styles.searchResults}>
+          <View className={styles.searchResultHeader}>
+            <Text className={styles.searchResultTitle}>搜索结果</Text>
+            <Text className={styles.searchResultCount}>共 {searchResults.length} 条预约</Text>
+          </View>
+          {searchResults.length > 0 ? (
+            <View className={styles.searchResultList}>
+              {searchResults.map((appt) => (
+                <View
+                  key={appt.id}
+                  className={styles.searchResultItem}
+                  onClick={() =>
+                    Taro.navigateTo({
+                      url: `/pages/customer-detail/index?id=${appt.customerId}&appointmentId=${appt.id}`
+                    })
+                  }
+                >
+                  <View className={styles.searchResultMain}>
+                    <View className={styles.searchResultInfo}>
+                      <Text className={styles.searchResultName}>{appt.customerName}</Text>
+                      <Text className={styles.searchResultPhone}>{appt.customerPhone}</Text>
+                    </View>
+                    <Text className={classnames(styles.statusBadge, styles[getBadgeClass(appt.status)])}>
+                      {statusLabels[appt.status]}
+                    </Text>
+                  </View>
+                  <View className={styles.searchResultDetail}>
+                    <Text className={styles.searchResultProject}>📋 {appt.project}</Text>
+                    <Text className={styles.searchResultDateTime}>📅 {formatDate(appt.date)} {appt.time}</Text>
+                  </View>
+                  {appt.rescheduleRemark && (
+                    <Text className={styles.searchResultRemark}>
+                      🔄 改期原因：{appt.rescheduleRemark}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View className={styles.emptySearch}>
+              <Text className={styles.emptySearchIcon}>🔍</Text>
+              <Text className={styles.emptySearchText}>未找到相关预约</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <>
+          <View className={styles.dateSection}>
         <View className={styles.dateNav}>
           <View
             className={classnames(styles.navBtn, weekStartOffset === 0 && styles.navBtnDisabled)}
@@ -373,6 +461,8 @@ const AppointmentPage: React.FC = () => {
           </View>
         )}
       </View>
+        </>
+      )}
 
       {showRescheduleModal && selectedAppointment && (
         <View className={styles.modalOverlay} onClick={() => setShowRescheduleModal(false)}>
@@ -450,6 +540,32 @@ const AppointmentPage: React.FC = () => {
               >
                 <Text>确认改期</Text>
               </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {showSearchInput && (
+        <View className={styles.inputOverlay} onClick={() => setShowSearchInput(false)}>
+          <View className={styles.inputContainer} onClick={(e) => e.stopPropagation()}>
+            <View className={styles.inputBox}>
+              <Input
+                className={styles.realInput}
+                placeholder="搜索客户姓名、电话、预约项目"
+                value={searchKeyword}
+                onInput={(e) => setSearchKeyword(e.detail.value)}
+                focus
+                confirmType="search"
+              />
+              <Text
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setShowSearchInput(false);
+                  setSearchKeyword('');
+                }}
+              >
+                取消
+              </Text>
             </View>
           </View>
         </View>
