@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
 import { CustomerStatus, STATUS_LABELS, STATUS_COLORS } from '@/types';
 import CustomerCard from '@/components/CustomerCard';
@@ -10,12 +10,21 @@ import styles from './index.module.scss';
 type FilterType = 'all' | CustomerStatus;
 
 const QueuePage: React.FC = () => {
-  const { customers, getDailyStats, searchCustomers } = useCustomerStore();
+  const { customers, getDailyStats, searchCustomers, checkAndUpdateWakeupStatus } = useCustomerStore();
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [showSearchInput, setShowSearchInput] = useState(false);
 
   const stats = useMemo(() => getDailyStats(), [getDailyStats]);
+
+  useDidShow(() => {
+    console.log('[QueuePage] 页面显示，检查需唤醒客户...');
+    checkAndUpdateWakeupStatus();
+  });
+
+  useEffect(() => {
+    checkAndUpdateWakeupStatus();
+  }, [checkAndUpdateWakeupStatus]);
 
   const filters: { key: FilterType; label: string; count: number; colorKey: string }[] = [
     { key: 'all', label: '全部', count: customers.length, colorKey: 'active' },

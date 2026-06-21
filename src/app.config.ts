@@ -7,7 +7,8 @@ export default defineAppConfig({
     'pages/report/index',
     'pages/customer-detail/index',
     'pages/activity-create/index',
-    'pages/message-template/index'
+    'pages/message-template/index',
+    'pages/activity-lead/index'
   ],
   window: {
     backgroundTextStyle: 'light',

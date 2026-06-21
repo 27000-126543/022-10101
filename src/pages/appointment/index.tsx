@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, Input, Picker } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
-import { Appointment } from '@/types';
+import { Appointment, TIME_SLOTS, PROJECT_OPTIONS } from '@/types';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 
@@ -17,9 +17,15 @@ const statusLabels: Record<Appointment['status'], string> = {
 };
 
 const AppointmentPage: React.FC = () => {
-  const { appointments, updateAppointmentStatus } = useCustomerStore();
+  const { appointments, updateAppointmentStatus, rescheduleAppointment, getCustomerById } = useCustomerStore();
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [rescheduleRemark, setRescheduleRemark] = useState('');
 
   const today = new Date();
   const weekDays = useMemo(() => {
@@ -52,14 +58,48 @@ const AppointmentPage: React.FC = () => {
     return {
       total: dayAppts.length,
       pending: dayAppts.filter((a) => a.status === 'pending').length,
-      arrived: dayAppts.filter((a) => a.status === 'arrived').length
+      arrived: dayAppts.filter((a) => a.status === 'arrived').length,
+      rescheduled: appointments.filter((a) => a.status === 'rescheduled').length
     };
   }, [appointments, selectedDate]);
+
+  const handleReschedule = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setNewDate(selectedDate);
+    setNewTime('');
+    setRescheduleRemark('');
+    setShowRescheduleModal(true);
+  };
+
+  const handleSubmitReschedule = () => {
+    if (!selectedAppointment) return;
+    if (!newDate) {
+      Taro.showToast({ title: '请选择新日期', icon: 'none' });
+      return;
+    }
+    if (!newTime) {
+      Taro.showToast({ title: '请选择新时间', icon: 'none' });
+      return;
+    }
+    if (!rescheduleRemark.trim()) {
+      Taro.showToast({ title: '请填写改期原因', icon: 'none' });
+      return;
+    }
+
+    rescheduleAppointment(selectedAppointment.id, newDate, newTime, rescheduleRemark.trim());
+    Taro.showToast({ title: '改期成功', icon: 'success' });
+    setShowRescheduleModal(false);
+    setSelectedAppointment(null);
+  };
 
   const handleAction = (appointment: Appointment, action: string) => {
     switch (action) {
       case 'arrive':
         updateAppointmentStatus(appointment.id, 'arrived');
+        const customer = getCustomerById(appointment.customerId);
+        if (customer && customer.status !== 'pending') {
+          console.log('[Appointment] 客户到院，状态更新为待到院');
+        }
         Taro.showToast({ title: '签到成功', icon: 'success' });
         break;
       case 'confirm':
@@ -67,7 +107,12 @@ const AppointmentPage: React.FC = () => {
         Taro.showToast({ title: '已确认', icon: 'success' });
         break;
       case 'reschedule':
-        Taro.showToast({ title: '改期功能', icon: 'none' });
+        handleReschedule(appointment);
+        break;
+      case 'viewNew':
+        Taro.navigateTo({
+          url: `/pages/customer-detail/index?id=${appointment.customerId}`
+        });
         break;
       case 'cancel':
         Taro.showModal({
@@ -116,6 +161,13 @@ const AppointmentPage: React.FC = () => {
 
   const currentDateStr = `${today.getFullYear()}年${today.getMonth() + 1}月`;
 
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr.replace(/-/g, '/'));
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}月${day}日`;
+  };
+
   return (
     <ScrollView scrollY className={styles.page}>
       <View className={styles.dateSection}>
@@ -158,6 +210,12 @@ const AppointmentPage: React.FC = () => {
             <Text className={classnames(styles.statValue, styles.statValue3)}>{stats.arrived}</Text>
             <Text className={styles.statLabel}>已到院</Text>
           </View>
+          {stats.rescheduled > 0 && (
+            <View className={styles.statItem}>
+              <Text className={classnames(styles.statValue, styles.statValue4)}>{stats.rescheduled}</Text>
+              <Text className={styles.statLabel}>待处理改期</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -195,6 +253,11 @@ const AppointmentPage: React.FC = () => {
                     <Text className={styles.timeIcon}>🕐</Text>
                     <Text className={styles.timeText}>{appt.time} 到院</Text>
                   </View>
+                  {appt.originalDate && (
+                    <Text className={styles.rescheduleText}>
+                      🔄 改期：原{formatDate(appt.originalDate)} → {formatDate(appt.date)}
+                    </Text>
+                  )}
                   {appt.remark && <Text className={styles.remarkText}>备注：{appt.remark}</Text>}
                 </View>
 
@@ -237,8 +300,11 @@ const AppointmentPage: React.FC = () => {
                     </View>
                   )}
                   {appt.status === 'rescheduled' && (
-                    <View className={classnames(styles.actionBtn, styles.btnPrimary)}>
-                      <Text>查看新预约</Text>
+                    <View
+                      className={classnames(styles.actionBtn, styles.btnPrimary)}
+                      onClick={() => handleAction(appt, 'viewNew')}
+                    >
+                      <Text>查看客户详情</Text>
                     </View>
                   )}
                   {appt.status === 'cancelled' && (
@@ -257,6 +323,87 @@ const AppointmentPage: React.FC = () => {
           </View>
         )}
       </View>
+
+      {showRescheduleModal && selectedAppointment && (
+        <View className={styles.modalOverlay} onClick={() => setShowRescheduleModal(false)}>
+          <View className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
+            <Text className={styles.modalTitle}>预约改期</Text>
+
+            <View className={styles.currentAppt}>
+              <Text className={styles.currentLabel}>当前预约</Text>
+              <Text className={styles.currentInfo}>
+                {selectedAppointment.date} {selectedAppointment.time} · {selectedAppointment.project}
+              </Text>
+            </View>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>
+                <Text className={styles.required}>*</Text>新预约日期
+              </Text>
+              <Picker
+                mode='date'
+                value={newDate}
+                start={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setNewDate(e.detail.value)}
+              >
+                <View className={styles.pickerBox}>
+                  <Text className={newDate ? styles.pickerText : styles.placeholder}>
+                    {newDate || '请选择日期'}
+                  </Text>
+                  <Text className={styles.pickerArrow}>▼</Text>
+                </View>
+              </Picker>
+            </View>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>
+                <Text className={styles.required}>*</Text>新预约时间
+              </Text>
+              <View className={styles.timeGrid}>
+                {TIME_SLOTS.map((time) => (
+                  <View
+                    key={time}
+                    className={classnames(
+                      styles.timeTag,
+                      newTime === time && styles.timeTagActive
+                    )}
+                    onClick={() => setNewTime(time)}
+                  >
+                    <Text>{time}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>
+                <Text className={styles.required}>*</Text>改期原因
+              </Text>
+              <Input
+                className={styles.formInput}
+                placeholder='请填写改期原因，便于后续跟进'
+                value={rescheduleRemark}
+                onInput={(e) => setRescheduleRemark(e.detail.value)}
+              />
+            </View>
+
+            <View className={styles.modalActions}>
+              <View
+                className={classnames(styles.modalBtn, styles.modalBtnCancel)}
+                onClick={() => setShowRescheduleModal(false)}
+              >
+                <Text>取消</Text>
+              </View>
+              <View
+                className={classnames(styles.modalBtn, styles.modalBtnWarning)}
+                onClick={handleSubmitReschedule}
+              >
+                <Text>确认改期</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };

@@ -355,6 +355,60 @@
   font-size: 200rpx;
 }
 
+.qrUrlBox {
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+  text-align: left;
+}
+
+.qrUrlLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.qrUrl {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.qrActionBtns {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.previewBtn,
+.copyBtn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.previewBtn {
+  background: $color-primary;
+  color: $color-text-white;
+}
+
+.copyBtn {
+  background: $color-primary-bg;
+  color: $color-primary;
+}
+
 .qrTips {
   font-size: $font-size-sm;
   color: $color-text-tertiary;

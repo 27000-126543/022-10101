@@ -311,3 +311,189 @@
   font-size: $font-size-md;
   color: $color-text-tertiary;
 }
+
+.statValue4 {
+  color: #165DFF !important;
+}
+
+.rescheduleText {
+  font-size: $font-size-xs;
+  color: $color-danger;
+  margin-top: $spacing-sm;
+  display: block;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $page-padding;
+}
+
+.modalContainer {
+  width: 100%;
+  max-height: 85vh;
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  text-align: center;
+  margin-bottom: $spacing-lg;
+}
+
+.currentAppt {
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.currentLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.currentInfo {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.formItem {
+  margin-bottom: $spacing-lg;
+}
+
+.formLabel {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.required {
+  color: $color-danger;
+  margin-right: 4rpx;
+}
+
+.formInput {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  background: $color-bg-page;
+
+  &:focus {
+    border-color: $color-primary;
+    background: $color-bg-card;
+  }
+}
+
+.pickerBox {
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg-page;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pickerText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.placeholder {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.pickerArrow {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.timeGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.timeTag {
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  background: $color-bg-page;
+  transition: all 0.2s;
+
+  &.timeTagActive {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.modalActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+}
+
+.modalBtn {
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.modalBtnCancel {
+  background: $color-bg-page;
+  color: $color-text-secondary;
+}
+
+.modalBtnWarning {
+  background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+  color: $color-text-white;
+}

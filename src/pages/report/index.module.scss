@@ -362,3 +362,116 @@
   font-size: $font-size-md;
   color: $color-text-tertiary;
 }
+
+.statSection {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-lg;
+}
+
+.transactionList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.transactionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, #FFF8E7 0%, #FFE8D6 100%);
+  border-radius: $radius-md;
+}
+
+.transactionInfo {
+  flex: 1;
+}
+
+.transactionName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.transactionProject {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.transactionAmount {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: #D48806;
+}
+
+.rescheduleBanner {
+  background: #E8F0FF;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+}
+
+.rescheduleIcon {
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+.rescheduleText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: #165DFF;
+  line-height: 1.5;
+}
+
+.rescheduleList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.rescheduleItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: #E8F0FF;
+  border-radius: $radius-md;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.rescheduleInfo {
+  flex: 1;
+}
+
+.rescheduleName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.rescheduleDate {
+  font-size: $font-size-xs;
+  color: #165DFF;
+  margin-bottom: 4rpx;
+}
+
+.rescheduleReason {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.rescheduleArrow {
+  font-size: $font-size-lg;
+  color: #165DFF;
+}

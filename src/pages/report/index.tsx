@@ -7,12 +7,13 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 
 const ReportPage: React.FC = () => {
-  const { customers, getDailyStats, getTodayTodos, appointments } = useCustomerStore();
+  const { customers, getDailyStats, getTodayTodos, appointments, transactions } = useCustomerStore();
   const stats = useMemo(() => getDailyStats(), [getDailyStats]);
   const todos = useMemo(() => getTodayTodos(), [getTodayTodos]);
 
   const today = new Date();
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
+  const todayStr = today.toISOString().split('T')[0];
 
   const channelStats = useMemo(() => {
     const map: Record<string, number> = {};
@@ -38,8 +39,28 @@ const ReportPage: React.FC = () => {
       }));
   }, [customers]);
 
+  const rescheduledAppointments = useMemo(() => {
+    return appointments
+      .filter((a) => a.status === 'rescheduled')
+      .slice(0, 5)
+      .map((a) => ({
+        id: a.id,
+        customerId: a.customerId,
+        name: a.customerName,
+        originalDate: a.originalDate || a.date,
+        newDate: a.date,
+        remark: a.rescheduleRemark || '客户改期'
+      }));
+  }, [appointments]);
+
+  const todayTransactions = useMemo(() => {
+    return transactions.filter(
+      (t) => new Date(t.date.replace(/-/g, '/')).toISOString().split('T')[0] === todayStr
+    );
+  }, [transactions, todayStr]);
+
   const todayArrived = appointments.filter(
-    (a) => a.date === today.toISOString().split('T')[0] && a.status === 'arrived'
+    (a) => a.date === todayStr && a.status === 'arrived'
   ).length;
 
   return (
@@ -66,9 +87,49 @@ const ReportPage: React.FC = () => {
             <Text className={styles.overviewLabel}>今日到院</Text>
           </View>
         </View>
+
+        {(stats.transactionCount > 0 || todayTransactions.length > 0) && (
+          <View className={styles.overviewCards}>
+            <View className={styles.overviewCard}>
+              <Text className={styles.overviewValue}>{stats.transactionCount}</Text>
+              <Text className={styles.overviewLabel}>今日成交</Text>
+            </View>
+            <View className={styles.overviewCard}>
+              <Text className={styles.overviewValue}>
+                ¥{stats.transactionAmount.toLocaleString('zh-CN')}
+              </Text>
+              <Text className={styles.overviewLabel}>成交金额</Text>
+            </View>
+            <View className={styles.overviewCard}>
+              <Text className={styles.overviewValue}>{stats.rescheduledCount}</Text>
+              <Text className={styles.overviewLabel}>待处理改期</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View className={styles.content}>
+        {todayTransactions.length > 0 && (
+          <View className={styles.statSection}>
+            <View className={styles.sectionHeader}>
+              <Text className={styles.sectionTitle}>
+                <Text className={styles.titleIcon}>💰</Text>今日成交记录
+              </Text>
+            </View>
+            <View className={styles.transactionList}>
+              {todayTransactions.map((t) => (
+                <View key={t.id} className={styles.transactionItem}>
+                  <View className={styles.transactionInfo}>
+                    <Text className={styles.transactionName}>{t.customerName}</Text>
+                    <Text className={styles.transactionProject}>{t.project}</Text>
+                  </View>
+                  <Text className={styles.transactionAmount}>¥{t.amount.toLocaleString('zh-CN')}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View className={styles.statSection}>
           <View className={styles.sectionHeader}>
             <Text className={styles.sectionTitle}>
@@ -138,6 +199,50 @@ const ReportPage: React.FC = () => {
           </View>
         </View>
 
+        {rescheduledAppointments.length > 0 && (
+          <View className={styles.stuckSection}>
+            <View className={styles.sectionHeader}>
+              <Text className={styles.sectionTitle}>
+                <Text className={styles.titleIcon}>🔄</Text>改期待处理
+              </Text>
+              <Text
+                className={styles.seeAll}
+                onClick={() => Taro.switchTab({ url: '/pages/appointment/index' })}
+              >
+                查看全部
+              </Text>
+            </View>
+
+            <View className={styles.rescheduleBanner}>
+              <Text className={styles.rescheduleIcon}>🔄</Text>
+              <Text className={styles.rescheduleText}>
+                有 {rescheduledAppointments.length} 位客户已改期，请注意确认新预约时间
+              </Text>
+            </View>
+
+            <View className={styles.rescheduleList}>
+              {rescheduledAppointments.map((a) => (
+                <View
+                  key={a.id}
+                  className={styles.rescheduleItem}
+                  onClick={() =>
+                    Taro.navigateTo({ url: `/pages/customer-detail/index?id=${a.customerId}` })
+                  }
+                >
+                  <View className={styles.rescheduleInfo}>
+                    <Text className={styles.rescheduleName}>{a.name}</Text>
+                    <Text className={styles.rescheduleDate}>
+                      原 {a.originalDate} → {a.newDate}
+                    </Text>
+                    <Text className={styles.rescheduleReason}>原因：{a.remark}</Text>
+                  </View>
+                  <Text className={styles.rescheduleArrow}>→</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View className={styles.channelSection}>
           <View className={styles.sectionHeader}>
             <Text className={styles.sectionTitle}>
@@ -188,7 +293,12 @@ const ReportPage: React.FC = () => {
                   <View className={styles.todoContent}>
                     <Text className={styles.todoText}>{todo.content}</Text>
                     <Text className={styles.todoMeta}>
-                      {todo.priority === 'high' ? '高优先级' : '中优先级'}
+                      {todo.type === 'follow' && '📞 跟进'}
+                      {todo.type === 'wakeup' && '🔔 唤醒'}
+                      {todo.type === 'appointment' && '📅 预约'}
+                      {todo.type === 'birthday' && '🎂 生日'}
+                      {todo.type === 'reschedule' && '🔄 改期'}
+                      {todo.priority === 'high' ? ' · 高优先级' : ' · 中优先级'}
                       {todo.time && ` · ${todo.time}`}
                     </Text>
                   </View>

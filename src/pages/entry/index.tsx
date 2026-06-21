@@ -10,7 +10,7 @@ type TabType = 'manual' | 'activity';
 
 const EntryPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('manual');
-  const { addCustomer, activities, addActivity } = useCustomerStore();
+  const { addCustomer, activities, addActivity, addCustomerFromActivity } = useCustomerStore();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -270,6 +270,38 @@ const EntryPage: React.FC = () => {
             <Text className={styles.qrSubtitle}>客户扫码后自动进入客资队列</Text>
             <View className={styles.qrCodeBox}>
               <Text className={styles.qrCodeText}>📱</Text>
+            </View>
+            <View className={styles.qrUrlBox}>
+              <Text className={styles.qrUrlLabel}>扫码链接：</Text>
+              <Text className={styles.qrUrl} selectable>
+                {activities.find((a) => a.id === showQr)?.qrUrl}
+              </Text>
+            </View>
+            <View className={styles.qrActionBtns}>
+              <View
+                className={styles.previewBtn}
+                onClick={() => {
+                  Taro.navigateTo({
+                    url: `/pages/activity-lead/index?activityId=${showQr}`
+                  });
+                }}
+              >
+                <Text>📲 预览客户留资页</Text>
+              </View>
+              <View
+                className={styles.copyBtn}
+                onClick={() => {
+                  const url = activities.find((a) => a.id === showQr)?.qrUrl;
+                  if (url) {
+                    Taro.setClipboardData({
+                      data: url,
+                      success: () => Taro.showToast({ title: '链接已复制', icon: 'success' })
+                    });
+                  }
+                }}
+              >
+                <Text>📋 复制链接</Text>
+              </View>
             </View>
             <Text className={styles.qrTips}>
               请保存此二维码并打印或分享到朋友圈、微信群{'\n'}

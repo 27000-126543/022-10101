@@ -1,5 +1,17 @@
 import { create } from 'zustand';
-import { Customer, CustomerStatus, Appointment, Activity, MessageTemplate, TodoItem } from '@/types';
+import {
+  Customer,
+  CustomerStatus,
+  Appointment,
+  Activity,
+  MessageTemplate,
+  TodoItem,
+  Transaction,
+  FollowUpRecord,
+  generateFollowSchedule,
+  calculateNextFollowUp,
+  shouldWakeUp
+} from '@/types';
 import { mockCustomers } from '@/data/customers';
 import { mockAppointments } from '@/data/appointments';
 import { mockActivities } from '@/data/activities';
@@ -10,11 +22,33 @@ interface CustomerStore {
   appointments: Appointment[];
   activities: Activity[];
   messageTemplates: MessageTemplate[];
-  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'followCount'>) => void;
+  transactions: Transaction[];
+  followUpRecords: FollowUpRecord[];
+
+  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'followCount'>) => string;
+  addCustomerFromActivity: (data: {
+    name: string;
+    phone: string;
+    projectPreference: string[];
+    activityId: string;
+  }) => string;
   updateCustomerStatus: (id: string, status: CustomerStatus) => void;
-  addActivity: (activity: Omit<Activity, 'id' | 'createdAt' | 'customerCount'>) => void;
-  addAppointment: (appointment: Omit<Appointment, 'id' | 'createdAt'>) => void;
+  updateCustomer: (id: string, updates: Partial<Customer>) => void;
+  recordFollowUp: (customerId: string, type: FollowUpRecord['type'], content: string) => void;
+  bindReferrer: (customerId: string, referrerName: string, referrerPhone?: string) => void;
+  addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => void;
+
+  addActivity: (activity: Omit<Activity, 'id' | 'createdAt' | 'customerCount'>) => string;
+  getActivityById: (id: string) => Activity | undefined;
+
+  addAppointment: (appointment: Omit<Appointment, 'id' | 'createdAt'>) => string;
   updateAppointmentStatus: (id: string, status: Appointment['status']) => void;
+  rescheduleAppointment: (id: string, newDate: string, newTime: string, remark: string) => void;
+  getAppointmentsByCustomer: (customerId: string) => Appointment[];
+
+  addFollowUpRecord: (record: Omit<FollowUpRecord, 'id' | 'createdAt' | 'operator'>) => void;
+  getFollowUpRecords: (customerId: string) => FollowUpRecord[];
+
   getCustomersByStatus: (status?: CustomerStatus) => Customer[];
   getTodayTodos: () => TodoItem[];
   getDailyStats: () => {
@@ -24,67 +58,296 @@ interface CustomerStore {
     wakeup: number;
     todayAppointments: number;
     pendingFollow: number;
+    rescheduledCount: number;
+    transactionCount: number;
+    transactionAmount: number;
   };
   searchCustomers: (keyword: string) => Customer[];
+  getCustomerById: (id: string) => Customer | undefined;
+  checkAndUpdateWakeupStatus: () => void;
 }
 
 export const useCustomerStore = create<CustomerStore>((set, get) => ({
-  customers: mockCustomers,
+  customers: mockCustomers.map((c) => {
+    const schedule = generateFollowSchedule(new Date(c.createdAt.replace(/-/g, '/')));
+    return {
+      ...c,
+      firstConsultReminder: schedule.firstConsultReminder,
+      nextFollowAt: schedule.nextFollowAt,
+      autoWakeupAt: schedule.autoWakeupAt,
+      followStage: schedule.followStage
+    };
+  }),
   appointments: mockAppointments,
-  activities: mockActivities,
+  activities: mockActivities.map((a) => ({
+    ...a,
+    qrUrl: `https://trae.example.com/activity/${a.id}`
+  })),
   messageTemplates: mockMessageTemplates,
+  transactions: [],
+  followUpRecords: [],
 
-  addCustomer: (customer) =>
+  addCustomer: (customer) => {
+    const now = new Date();
+    const schedule = generateFollowSchedule(now);
+    const id = Date.now().toString();
     set((state) => ({
       customers: [
         {
           ...customer,
-          id: Date.now().toString(),
-          createdAt: new Date().toLocaleString('zh-CN'),
-          followCount: 0
+          id,
+          createdAt: now.toLocaleString('zh-CN'),
+          followCount: 0,
+          ...schedule
         },
         ...state.customers
       ]
-    })),
+    }));
+    console.log('[CustomerStore] 新增客户:', id, customer.name);
+    return id;
+  },
 
-  updateCustomerStatus: (id, status) =>
+  addCustomerFromActivity: (data) => {
+    const now = new Date();
+    const schedule = generateFollowSchedule(now);
+    const activity = get().activities.find((a) => a.id === data.activityId);
+    const id = Date.now().toString();
+
+    set((state) => ({
+      customers: [
+        {
+          id,
+          name: data.name,
+          phone: data.phone,
+          status: 'new',
+          channel: '活动扫码',
+          projectPreference: data.projectPreference,
+          activityId: data.activityId,
+          activityName: activity?.name,
+          createdAt: now.toLocaleString('zh-CN'),
+          followCount: 0,
+          tags: ['活动扫码'],
+          ...schedule
+        },
+        ...state.customers
+      ],
+      activities: state.activities.map((a) =>
+        a.id === data.activityId ? { ...a, customerCount: a.customerCount + 1 } : a
+      )
+    }));
+
+    console.log('[CustomerStore] 活动扫码新增客户:', id, data.name, '活动:', activity?.name);
+    return id;
+  },
+
+  updateCustomerStatus: (id, status) => {
+    const now = new Date();
+    const customer = get().customers.find((c) => c.id === id);
+    const nextFollowAt = customer?.lastFollowAt
+      ? calculateNextFollowUp(new Date(customer.lastFollowAt.replace(/-/g, '/')), (customer.followStage || 1) + 1)
+      : undefined;
+
     set((state) => ({
       customers: state.customers.map((c) =>
-        c.id === id ? { ...c, status, lastFollowAt: new Date().toLocaleString('zh-CN') } : c
+        c.id === id
+          ? {
+              ...c,
+              status,
+              lastFollowAt: now.toLocaleString('zh-CN'),
+              nextFollowAt,
+              followStage: (c.followStage || 1) + 1
+            }
+          : c
       )
-    })),
+    }));
+    console.log('[CustomerStore] 更新客户状态:', id, status);
+  },
 
-  addActivity: (activity) =>
+  updateCustomer: (id, updates) => {
+    set((state) => ({
+      customers: state.customers.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    }));
+    console.log('[CustomerStore] 更新客户信息:', id, updates);
+  },
+
+  recordFollowUp: (customerId, type, content) => {
+    const now = new Date();
+    const customer = get().customers.find((c) => c.id === customerId);
+    const followStage = (customer?.followStage || 1) + 1;
+    const nextFollowAt = calculateNextFollowUp(now, followStage);
+
+    set((state) => ({
+      followUpRecords: [
+        {
+          id: Date.now().toString(),
+          customerId,
+          type,
+          content,
+          createdAt: now.toLocaleString('zh-CN'),
+          operator: '咨询顾问小美'
+        },
+        ...state.followUpRecords
+      ],
+      customers: state.customers.map((c) =>
+        c.id === customerId
+          ? {
+              ...c,
+              lastFollowAt: now.toLocaleString('zh-CN'),
+              nextFollowAt,
+              followCount: c.followCount + 1,
+              followStage,
+              status: c.status === 'new' ? 'contacted' : c.status
+            }
+          : c
+      )
+    }));
+    console.log('[CustomerStore] 记录跟进:', customerId, type);
+  },
+
+  bindReferrer: (customerId, referrerName, referrerPhone) => {
+    const referrer = get().customers.find(
+      (c) => c.name === referrerName || c.phone === referrerPhone
+    );
+
+    set((state) => ({
+      customers: state.customers.map((c) =>
+        c.id === customerId
+          ? {
+              ...c,
+              referrerId: referrer?.id,
+              referrerName,
+              referrerPhone,
+              tags: [...c.tags, '转介绍']
+            }
+          : c
+      )
+    }));
+    console.log('[CustomerStore] 绑定推荐人:', customerId, referrerName);
+  },
+
+  addTransaction: (transaction) => {
+    const now = new Date();
+    set((state) => ({
+      transactions: [
+        {
+          ...transaction,
+          id: Date.now().toString(),
+          date: now.toLocaleString('zh-CN')
+        },
+        ...state.transactions
+      ],
+      customers: state.customers.map((c) =>
+        c.id === transaction.customerId
+          ? {
+              ...c,
+              totalConsumption: (c.totalConsumption || 0) + transaction.amount,
+              isVip: (c.totalConsumption || 0) + transaction.amount >= 5000 ? true : c.isVip
+            }
+          : c
+      )
+    }));
+    console.log('[CustomerStore] 新增成交记录:', transaction.customerName, transaction.amount);
+  },
+
+  addActivity: (activity) => {
+    const id = Date.now().toString();
     set((state) => ({
       activities: [
         {
           ...activity,
-          id: Date.now().toString(),
+          id,
           createdAt: new Date().toLocaleDateString('zh-CN'),
-          customerCount: 0
+          customerCount: 0,
+          qrUrl: `https://trae.example.com/activity/${id}`
         },
         ...state.activities
       ]
-    })),
+    }));
+    console.log('[CustomerStore] 新增活动:', id, activity.name);
+    return id;
+  },
 
-  addAppointment: (appointment) =>
+  getActivityById: (id) => {
+    return get().activities.find((a) => a.id === id);
+  },
+
+  addAppointment: (appointment) => {
+    const id = Date.now().toString();
     set((state) => ({
       appointments: [
         {
           ...appointment,
-          id: Date.now().toString(),
-          createdAt: new Date().toLocaleString('zh-CN')
+          id,
+          createdAt: new Date().toLocaleString('zh-CN'),
+          rescheduleCount: 0
         },
         ...state.appointments
-      ]
-    })),
+      ],
+      customers: state.customers.map((c) =>
+        c.id === appointment.customerId && c.status !== 'pending'
+          ? { ...c, status: 'pending' as CustomerStatus }
+          : c
+      )
+    }));
+    console.log('[CustomerStore] 新增预约:', id, appointment.customerName, appointment.date);
+    return id;
+  },
 
-  updateAppointmentStatus: (id, status) =>
+  updateAppointmentStatus: (id, status) => {
+    set((state) => ({
+      appointments: state.appointments.map((a) => (a.id === id ? { ...a, status } : a))
+    }));
+    console.log('[CustomerStore] 更新预约状态:', id, status);
+  },
+
+  rescheduleAppointment: (id, newDate, newTime, remark) => {
+    const appointment = get().appointments.find((a) => a.id === id);
+    if (!appointment) return;
+
     set((state) => ({
       appointments: state.appointments.map((a) =>
-        a.id === id ? { ...a, status } : a
+        a.id === id
+          ? {
+              ...a,
+              date: newDate,
+              time: newTime,
+              status: 'rescheduled',
+              originalDate: a.originalDate || a.date,
+              originalTime: a.originalTime || a.time,
+              rescheduleRemark: remark,
+              rescheduleCount: (a.rescheduleCount || 0) + 1,
+              remark: a.remark ? `${a.remark} | 改期: ${remark}` : `改期: ${remark}`
+            }
+          : a
       )
-    })),
+    }));
+    console.log('[CustomerStore] 预约改期:', id, '新时间:', newDate, newTime);
+  },
+
+  getAppointmentsByCustomer: (customerId) => {
+    return get().appointments.filter((a) => a.customerId === customerId);
+  },
+
+  addFollowUpRecord: (record) => {
+    const now = new Date();
+    set((state) => ({
+      followUpRecords: [
+        {
+          ...record,
+          id: Date.now().toString(),
+          createdAt: now.toLocaleString('zh-CN'),
+          operator: '咨询顾问小美'
+        },
+        ...state.followUpRecords
+      ]
+    }));
+  },
+
+  getFollowUpRecords: (customerId) => {
+    return get().followUpRecords
+      .filter((r) => r.customerId === customerId)
+      .sort((a, b) => new Date(b.createdAt.replace(/-/g, '/')).getTime() - new Date(a.createdAt.replace(/-/g, '/')).getTime());
+  },
 
   getCustomersByStatus: (status) => {
     const { customers } = get();
@@ -96,6 +359,7 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     const { customers, appointments } = get();
     const todos: TodoItem[] = [];
     const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
 
     customers.forEach((c) => {
       if (c.status === 'new') {
@@ -104,20 +368,38 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
           type: 'follow',
           customerId: c.id,
           customerName: c.name,
-          content: `新线索：${c.name} - ${c.projectPreference.join('、')}`,
-          priority: 'high'
+          content: `首咨提醒：${c.name} - ${c.projectPreference.join('、')}`,
+          priority: 'high',
+          time: c.firstConsultReminder?.split(' ')[1]
         });
       }
+
       if (c.status === 'wakeup') {
         todos.push({
           id: `wakeup-${c.id}`,
           type: 'wakeup',
           customerId: c.id,
           customerName: c.name,
-          content: `需唤醒：${c.name} 已多次未回复`,
+          content: `二次唤醒：${c.name} 已${c.followCount}次跟进未回复`,
           priority: 'high'
         });
       }
+
+      if (c.nextFollowAt) {
+        const nextFollowDate = new Date(c.nextFollowAt.replace(/-/g, '/'));
+        if (nextFollowDate.toISOString().split('T')[0] === today) {
+          todos.push({
+            id: `next-${c.id}`,
+            type: 'follow',
+            customerId: c.id,
+            customerName: c.name,
+            content: `跟进提醒：${c.name} 计划跟进时间`,
+            priority: 'medium',
+            time: c.nextFollowAt.split(' ')[1]
+          });
+        }
+      }
+
       if (c.birthday) {
         const bday = c.birthday.substring(5);
         const todayMonthDay = today.substring(5);
@@ -127,7 +409,7 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
             type: 'birthday',
             customerId: c.id,
             customerName: c.name,
-            content: `生日快乐：${c.name} 今天生日，发送祝福`,
+            content: `生日祝福：${c.name} 今天生日，发送祝福`,
             priority: 'medium'
           });
         }
@@ -148,6 +430,19 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
         });
       });
 
+    appointments
+      .filter((a) => a.status === 'rescheduled')
+      .forEach((a) => {
+        todos.push({
+          id: `resched-${a.id}`,
+          type: 'reschedule',
+          customerId: a.customerId,
+          customerName: a.customerName,
+          content: `改期待确认：${a.customerName} 原${a.originalDate} 改至${a.date}`,
+          priority: 'medium'
+        });
+      });
+
     return todos.sort((a, b) => {
       const priorityOrder = { high: 0, medium: 1, low: 2 };
       return priorityOrder[a.priority] - priorityOrder[b.priority];
@@ -155,8 +450,12 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
   },
 
   getDailyStats: () => {
-    const { customers, appointments } = get();
+    const { customers, appointments, transactions } = get();
     const today = new Date().toISOString().split('T')[0];
+
+    const todayTransactions = transactions.filter(
+      (t) => new Date(t.date.replace(/-/g, '/')).toISOString().split('T')[0] === today
+    );
 
     return {
       newLeads: customers.filter((c) => c.status === 'new').length,
@@ -164,7 +463,10 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
       pending: customers.filter((c) => c.status === 'pending').length,
       wakeup: customers.filter((c) => c.status === 'wakeup').length,
       todayAppointments: appointments.filter((a) => a.date === today).length,
-      pendingFollow: customers.filter((c) => c.status === 'new' || c.status === 'wakeup').length
+      pendingFollow: customers.filter((c) => c.status === 'new' || c.status === 'wakeup').length,
+      rescheduledCount: appointments.filter((a) => a.status === 'rescheduled').length,
+      transactionCount: todayTransactions.length,
+      transactionAmount: todayTransactions.reduce((sum, t) => sum + t.amount, 0)
     };
   },
 
@@ -176,7 +478,32 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
       (c) =>
         c.name.toLowerCase().includes(kw) ||
         c.phone.includes(kw) ||
-        c.projectPreference.some((p) => p.includes(kw))
+        c.projectPreference.some((p) => p.includes(kw)) ||
+        (c.referrerName && c.referrerName.includes(kw))
     );
+  },
+
+  getCustomerById: (id) => {
+    return get().customers.find((c) => c.id === id);
+  },
+
+  checkAndUpdateWakeupStatus: () => {
+    const { customers } = get();
+    const now = new Date();
+
+    const updatedCustomers = customers.map((c) => {
+      if (c.status === 'new' || c.status === 'contacted') {
+        if (shouldWakeUp(c.lastFollowAt, c.nextFollowAt)) {
+          console.log('[CustomerStore] 自动标记需唤醒:', c.name);
+          return { ...c, status: 'wakeup' as CustomerStatus };
+        }
+      }
+      return c;
+    });
+
+    const hasChanges = updatedCustomers.some((c, i) => c.status !== customers[i].status);
+    if (hasChanges) {
+      set({ customers: updatedCustomers });
+    }
   }
 }));

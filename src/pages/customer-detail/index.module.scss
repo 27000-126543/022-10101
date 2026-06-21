@@ -223,6 +223,175 @@
   color: $color-primary;
 }
 
+.btnCase {
+  background: #E8F0FF;
+  color: $color-status-new;
+}
+
+.btnDiscount {
+  background: #FFF7E6;
+  color: $color-warning;
+}
+
+.followSchedule {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.scheduleLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xs;
+  display: block;
+}
+
+.scheduleInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scheduleText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.scheduleStage {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  background: $color-primary-bg;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+}
+
+.appointmentList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.appointmentItem {
+  padding: $spacing-md;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.appointmentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-xs;
+}
+
+.appointmentMain {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.appointmentProject {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.appointmentBadge {
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+}
+
+.statusPending {
+  background: #FFF7E6;
+  color: $color-warning;
+}
+
+.statusConfirmed {
+  background: $color-status-new-bg;
+  color: $color-status-new;
+}
+
+.statusArrived {
+  background: $color-status-contacted-bg;
+  color: $color-status-contacted;
+}
+
+.statusCancelled {
+  background: $color-bg-page;
+  color: $color-text-tertiary;
+}
+
+.statusRescheduled {
+  background: #FFECE8;
+  color: $color-danger;
+}
+
+.appointmentTime {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.appointmentOriginal {
+  font-size: $font-size-xs;
+  color: $color-danger;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+.appointmentRemark {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+.referBadge {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  background: #FFF7E6;
+  padding: 2rpx 12rpx;
+  border-radius: $radius-xs;
+  font-weight: $font-weight-medium;
+}
+
+.referralBound {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: $spacing-sm;
+}
+
+.boundLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.boundName {
+  font-size: $font-size-md;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.referralHint {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: $spacing-sm;
+}
+
+.hintText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.hintArrow {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+}
+
 .followHistory {
   display: flex;
   flex-direction: column;
@@ -365,4 +534,192 @@
 .emptyText {
   font-size: $font-size-sm;
   color: $color-text-tertiary;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $page-padding;
+}
+
+.modalContainer {
+  width: 100%;
+  max-height: 85vh;
+  background: $color-bg-card;
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  text-align: center;
+  margin-bottom: $spacing-xl;
+}
+
+.formItem {
+  margin-bottom: $spacing-lg;
+}
+
+.formLabel {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.required {
+  color: $color-danger;
+  margin-right: 4rpx;
+}
+
+.formInput {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  background: $color-bg-page;
+
+  &:focus {
+    border-color: $color-primary;
+    background: $color-bg-card;
+  }
+}
+
+.pickerBox {
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-md;
+  background: $color-bg-page;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pickerText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.placeholder {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.pickerArrow {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.timeGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.timeTag {
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  background: $color-bg-page;
+  transition: all 0.2s;
+
+  &.timeTagActive {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.projectGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.projectItem {
+  padding: $spacing-sm $spacing-md;
+  border: 2rpx solid $color-border;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  background: $color-bg-page;
+  transition: all 0.2s;
+
+  &.projectItemActive {
+    border-color: $color-primary;
+    background: $color-primary-bg;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.modalActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+}
+
+.modalBtn {
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.modalBtnCancel {
+  background: $color-bg-page;
+  color: $color-text-secondary;
+}
+
+.modalBtnConfirm {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+}
+
+.modalBtnSuccess {
+  background: linear-gradient(135deg, $color-success 0%, #23C343 100%);
+  color: $color-text-white;
+}
+
+.modalBtnWarning {
+  background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+  color: $color-text-white;
 }

@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
 import StatCard from '@/components/StatCard';
 import QuickAction from '@/components/QuickAction';
@@ -9,10 +9,23 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 
 const HomePage: React.FC = () => {
-  const { getDailyStats, getTodayTodos, customers } = useCustomerStore();
+  const { getDailyStats, getTodayTodos, customers, checkAndUpdateWakeupStatus, transactions } = useCustomerStore();
   const stats = useMemo(() => getDailyStats(), [getDailyStats]);
   const todos = useMemo(() => getTodayTodos(), [getTodayTodos]);
   const newCustomers = useMemo(() => customers.filter(c => c.status === 'new').slice(0, 3), [customers]);
+
+  useDidShow(() => {
+    console.log('[HomePage] 页面显示，检查需唤醒客户...');
+    checkAndUpdateWakeupStatus();
+  });
+
+  useEffect(() => {
+    checkAndUpdateWakeupStatus();
+    const timer = setInterval(() => {
+      checkAndUpdateWakeupStatus();
+    }, 5 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [checkAndUpdateWakeupStatus]);
 
   const today = new Date();
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
@@ -72,6 +85,29 @@ const HomePage: React.FC = () => {
           <StatCard title="待跟进" value={stats.pendingFollow} color="#ffffff" subtitle="紧急处理" />
           <StatCard title="今日预约" value={stats.todayAppointments} color="#ffffff" subtitle="到院数" />
         </View>
+        {stats.transactionCount > 0 && (
+          <View className={styles.statsRow}>
+            <StatCard 
+              title="今日成交" 
+              value={stats.transactionCount} 
+              color="#ffffff" 
+              subtitle="单" 
+            />
+            <StatCard 
+              title="成交金额" 
+              value={stats.transactionAmount} 
+              color="#ffffff" 
+              subtitle="元" 
+              isCurrency
+            />
+            <StatCard 
+              title="改期待处理" 
+              value={stats.rescheduledCount} 
+              color="#ffffff" 
+              subtitle="位" 
+            />
+          </View>
+        )}
       </View>
 
       <View className={styles.todoSection}>
@@ -99,6 +135,7 @@ const HomePage: React.FC = () => {
                     {todo.type === 'wakeup' && '唤醒'}
                     {todo.type === 'appointment' && '预约'}
                     {todo.type === 'birthday' && '生日'}
+                    {todo.type === 'reschedule' && '改期'}
                   </Text>
                 </View>
               ))}

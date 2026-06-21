@@ -109,6 +109,48 @@
   margin-bottom: $spacing-xs;
 }
 
+.referBadge {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  background: #FFF7E6;
+  padding: 2rpx 10rpx;
+  border-radius: $radius-xs;
+  font-weight: $font-weight-medium;
+}
+
+.followHint {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-xs;
+  margin-bottom: $spacing-sm;
+}
+
+.hint-normal {
+  background: $color-bg-page;
+  color: $color-text-secondary;
+}
+
+.hint-urgent {
+  background: #FFF7E6;
+  color: $color-warning;
+}
+
+.hint-overdue {
+  background: #FFECE8;
+  color: $color-danger;
+}
+
+.hintIcon {
+  font-size: $font-size-sm;
+}
+
+.hintText {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
 .referrerText {
   font-size: $font-size-sm;
   color: $color-warning;

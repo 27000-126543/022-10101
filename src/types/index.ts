@@ -1,5 +1,12 @@
 export type CustomerStatus = 'new' | 'contacted' | 'pending' | 'wakeup';
 
+export interface FollowUpSchedule {
+  firstConsultReminder: string;
+  nextFollowAt: string;
+  autoWakeupAt: string;
+  followStage: number;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -14,10 +21,14 @@ export interface Customer {
   createdAt: string;
   lastFollowAt?: string;
   nextFollowAt?: string;
+  firstConsultReminder?: string;
+  autoWakeupAt?: string;
+  followStage?: number;
   birthday?: string;
   isVip?: boolean;
   referrerId?: string;
   referrerName?: string;
+  referrerPhone?: string;
   totalConsumption?: number;
   followCount: number;
   tags: string[];
@@ -37,6 +48,7 @@ export interface Activity {
   name: string;
   description: string;
   qrCode?: string;
+  qrUrl?: string;
   createdAt: string;
   customerCount: number;
   status: 'active' | 'inactive';
@@ -50,9 +62,13 @@ export interface Appointment {
   project: string;
   date: string;
   time: string;
+  originalDate?: string;
+  originalTime?: string;
   status: 'pending' | 'confirmed' | 'arrived' | 'cancelled' | 'rescheduled';
   createdAt: string;
   remark?: string;
+  rescheduleRemark?: string;
+  rescheduleCount?: number;
 }
 
 export interface Transaction {
@@ -82,11 +98,12 @@ export interface DailyStats {
   pendingFollow: number;
   pendingAppointment: number;
   stuckLeads: number;
+  rescheduledCount: number;
 }
 
 export interface TodoItem {
   id: string;
-  type: 'follow' | 'appointment' | 'birthday' | 'wakeup';
+  type: 'follow' | 'appointment' | 'birthday' | 'wakeup' | 'reschedule';
   customerId: string;
   customerName: string;
   content: string;
@@ -133,3 +150,35 @@ export const CHANNEL_OPTIONS = [
   '百度推广',
   '其他'
 ];
+
+export const TIME_SLOTS = [
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
+];
+
+export const generateFollowSchedule = (createdAt: Date): FollowUpSchedule => {
+  const firstConsult = new Date(createdAt.getTime() + 30 * 60 * 1000);
+  const nextFollow = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
+  const autoWakeup = new Date(createdAt.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+  return {
+    firstConsultReminder: firstConsult.toLocaleString('zh-CN'),
+    nextFollowAt: nextFollow.toLocaleString('zh-CN'),
+    autoWakeupAt: autoWakeup.toLocaleString('zh-CN'),
+    followStage: 1
+  };
+};
+
+export const calculateNextFollowUp = (lastFollowAt: Date, stage: number): string => {
+  const hours = stage === 1 ? 24 : stage === 2 ? 48 : 72;
+  const next = new Date(lastFollowAt.getTime() + hours * 60 * 60 * 1000);
+  return next.toLocaleString('zh-CN');
+};
+
+export const shouldWakeUp = (lastFollowAt?: string, nextFollowAt?: string): boolean => {
+  if (!lastFollowAt && !nextFollowAt) return false;
+  const now = new Date();
+  const targetDate = nextFollowAt ? new Date(nextFollowAt.replace(/-/g, '/')) : new Date(lastFollowAt!.replace(/-/g, '/'));
+  const diffHours = (now.getTime() - targetDate.getTime()) / (1000 * 60 * 60);
+  return diffHours >= 48;
+};
