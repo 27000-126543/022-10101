@@ -1,0 +1,368 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  padding-bottom: 200rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  padding: $spacing-xl $page-padding $spacing-xxl;
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+}
+
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-round;
+  background: rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatarText {
+  font-size: 48rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-bold;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-xs;
+}
+
+.name {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.vipBadge {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #fff;
+  font-size: $font-size-xs;
+  padding: 2rpx 12rpx;
+  border-radius: $radius-xs;
+  font-weight: $font-weight-medium;
+}
+
+.phone {
+  font-size: $font-size-md;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: $spacing-sm;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+}
+
+.tag {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2rpx 12rpx;
+  border-radius: $radius-xs;
+}
+
+.content {
+  padding: 0 $page-padding;
+  margin-top: -$spacing-lg;
+}
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.cardTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.titleIcon {
+  font-size: 32rpx;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.infoLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.infoValue {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.projectTag {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  background: $color-primary-bg;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-button;
+  font-weight: $font-weight-medium;
+}
+
+.statusSelector {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.statusBtn {
+  @include button-reset;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  background: $color-bg-page;
+  color: $color-text-secondary;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.activeNew {
+  background: $color-status-new-bg;
+  color: $color-status-new;
+  border-color: $color-status-new;
+}
+.activeContacted {
+  background: $color-status-contacted-bg;
+  color: $color-status-contacted;
+  border-color: $color-status-contacted;
+}
+.activePending {
+  background: $color-status-pending-bg;
+  color: $color-status-pending;
+  border-color: $color-status-pending;
+}
+.activeWakeup {
+  background: $color-status-wakeup-bg;
+  color: $color-status-wakeup;
+  border-color: $color-status-wakeup;
+}
+
+.followSection {
+  margin-bottom: $spacing-md;
+}
+
+.followBtns {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.followBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  background: $color-bg-page;
+  color: $color-text-secondary;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.btnTemplate {
+  background: $color-primary-bg;
+  color: $color-primary;
+}
+
+.btnRemind {
+  background: $color-status-pending-bg;
+  color: $color-status-pending;
+}
+
+.btnBirthday {
+  background: #FFF0F5;
+  color: $color-primary;
+}
+
+.followHistory {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.historyItem {
+  display: flex;
+  gap: $spacing-md;
+  padding-left: $spacing-md;
+  position: relative;
+}
+
+.historyDot {
+  position: absolute;
+  left: 0;
+  top: 8rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $radius-round;
+  background: $color-primary;
+}
+
+.historyLine {
+  position: absolute;
+  left: 7rpx;
+  top: 28rpx;
+  bottom: -$spacing-md;
+  width: 2rpx;
+  background: $color-border;
+}
+
+.historyItem:last-child .historyLine {
+  display: none;
+}
+
+.historyContent {
+  flex: 1;
+}
+
+.historyText {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: 1.6;
+}
+
+.historyMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.referralSection {
+  background: linear-gradient(135deg, #FFF8E7 0%, #FFE8D6 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.referralTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: #D48806;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.referralInput {
+  width: 100%;
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-md;
+  margin-bottom: $spacing-md;
+}
+
+.referralBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: $spacing-sm;
+  padding-bottom: calc($spacing-md + env(safe-area-inset-bottom));
+}
+
+.bottomBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.btnSecondary {
+  background: $color-bg-page;
+  color: $color-text-secondary;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+}
+
+.btnSuccess {
+  background: linear-gradient(135deg, $color-success 0%, #23C343 100%);
+  color: $color-text-white;
+}
+
+.emptyHistory {
+  text-align: center;
+  padding: $spacing-xl 0;
+}
+
+.emptyText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}

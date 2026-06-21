@@ -1,0 +1,55 @@
+@use '@/styles/variables.scss' as *;
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+}
+
+.sm {
+  padding: 4rpx 12rpx;
+  .text {
+    font-size: $font-size-xs;
+  }
+}
+
+.md {
+  padding: 8rpx 20rpx;
+  .text {
+    font-size: $font-size-sm;
+  }
+}
+
+.text {
+  font-weight: $font-weight-medium;
+}
+
+.new {
+  background-color: $color-status-new-bg;
+  .text {
+    color: $color-status-new;
+  }
+}
+
+.contacted {
+  background-color: $color-status-contacted-bg;
+  .text {
+    color: $color-status-contacted;
+  }
+}
+
+.pending {
+  background-color: $color-status-pending-bg;
+  .text {
+    color: $color-status-pending;
+  }
+}
+
+.wakeup {
+  background-color: $color-status-wakeup-bg;
+  .text {
+    color: $color-status-wakeup;
+  }
+}

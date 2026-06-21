@@ -1,0 +1,127 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.99);
+  }
+}
+
+.leftBorder {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6rpx;
+  border-top-left-radius: $radius-lg;
+  border-bottom-left-radius: $radius-lg;
+}
+
+.new .leftBorder { background: $color-status-new; }
+.contacted .leftBorder { background: $color-status-contacted; }
+.pending .leftBorder { background: $color-status-pending; }
+.wakeup .leftBorder { background: $color-status-wakeup; }
+
+.content {
+  flex: 1;
+  margin-left: $spacing-sm;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.name {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.vipBadge {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: #fff;
+  font-size: $font-size-xs;
+  padding: 2rpx 10rpx;
+  border-radius: $radius-xs;
+  font-weight: $font-weight-medium;
+}
+
+.phone {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+}
+
+.projects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.projectTag {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  background: $color-primary-bg;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.channel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.activity {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.referrer {
+  margin-bottom: $spacing-xs;
+}
+
+.referrerText {
+  font-size: $font-size-sm;
+  color: $color-warning;
+}
+
+.meta {
+  display: flex;
+  gap: $spacing-lg;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-divider;
+}
+
+.metaText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
