@@ -268,8 +268,16 @@ const EntryPage: React.FC = () => {
               {activities.find((a) => a.id === showQr)?.name}
             </Text>
             <Text className={styles.qrSubtitle}>客户扫码后自动进入客资队列</Text>
-            <View className={styles.qrCodeBox}>
+            <View
+              className={styles.qrCodeBox}
+              onClick={() => {
+                Taro.navigateTo({
+                  url: `/pages/activity-lead/index?activityId=${showQr}`
+                });
+              }}
+            >
               <Text className={styles.qrCodeText}>📱</Text>
+              <Text className={styles.qrCodeTapHint}>点击预览</Text>
             </View>
             <View className={styles.qrUrlBox}>
               <Text className={styles.qrUrlLabel}>小程序页面路径：</Text>

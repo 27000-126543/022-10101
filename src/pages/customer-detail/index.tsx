@@ -9,6 +9,7 @@ import styles from './index.module.scss';
 const CustomerDetailPage: React.FC = () => {
   const router = useRouter();
   const customerId = router.params.id!;
+  const highlightApptId = router.params.appointmentId;
 
   const storeCustomers = useCustomerStore((s) => s.customers);
   const storeAppointments = useCustomerStore((s) => s.appointments);
@@ -346,8 +347,18 @@ const CustomerDetailPage: React.FC = () => {
             <View className={styles.appointmentList}>
               {appointments.map((appt) => {
                 const badge = getStatusBadge(appt.status);
+                const isHighlighted = highlightApptId && highlightApptId === appt.id;
                 return (
-                  <View key={appt.id} className={styles.appointmentItem}>
+                  <View
+                    key={appt.id}
+                    className={classnames(
+                      styles.appointmentItem,
+                      isHighlighted && styles.appointmentItemHighlight
+                    )}
+                  >
+                    {isHighlighted && (
+                      <Text className={styles.highlightBadge}>🔍 刚刚改期的预约</Text>
+                    )}
                     <View className={styles.appointmentHeader}>
                       <View className={styles.appointmentMain}>
                         <Text className={styles.appointmentProject}>{appt.project}</Text>

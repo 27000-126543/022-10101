@@ -355,6 +355,13 @@
   font-size: 200rpx;
 }
 
+.qrCodeTapHint {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
 .qrUrlBox {
   background: $color-bg-page;
   border-radius: $radius-md;

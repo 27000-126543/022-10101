@@ -277,6 +277,34 @@
   padding: $spacing-md;
   background: $color-bg-page;
   border-radius: $radius-md;
+  margin-bottom: $spacing-sm;
+}
+
+.appointmentItemHighlight {
+  background: linear-gradient(135deg, #E8F0FF 0%, #FFF0F6 100%);
+  border: 3rpx solid $color-primary;
+  box-shadow: 0 0 0 4rpx rgba(233, 30, 140, 0.1);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4rpx rgba(233, 30, 140, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 10rpx rgba(233, 30, 140, 0.05);
+  }
+}
+
+.highlightBadge {
+  display: inline-block;
+  font-size: $font-size-xs;
+  color: $color-primary;
+  background: rgba(233, 30, 140, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  margin-bottom: $spacing-xs;
+  font-weight: $font-weight-semibold;
 }
 
 .appointmentHeader {

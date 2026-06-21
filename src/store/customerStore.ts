@@ -275,11 +275,27 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
   },
 
   bindReferrer: (customerId, referrerName, referrerPhone) => {
+    const now = new Date();
     const referrer = get().customers.find(
       (c) => c.name === referrerName || c.phone === referrerPhone
     );
+    const currentCustomer = get().customers.find((c) => c.id === customerId);
+    const prevReferrerName = currentCustomer?.referrerName;
 
     set((state) => {
+      const followContent = prevReferrerName
+        ? `更换推荐人：原推荐人「${prevReferrerName}」→ 新推荐人「${referrerName}」${referrerPhone ? `(${referrerPhone})` : ''}`
+        : `绑定推荐人：${referrerName}${referrerPhone ? `(${referrerPhone})` : ''}，享受转介绍奖励`;
+
+      const newRecord: FollowUpRecord = {
+        id: Date.now().toString(),
+        customerId,
+        type: 'other',
+        content: followContent,
+        createdAt: now.toLocaleString('zh-CN'),
+        operator: '咨询顾问小美'
+      };
+
       const newState = {
         customers: state.customers.map((c) =>
           c.id === customerId
@@ -291,7 +307,8 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
                 tags: c.tags.includes('转介绍') ? c.tags : [...c.tags, '转介绍']
               }
             : c
-        )
+        ),
+        followUpRecords: [newRecord, ...state.followUpRecords]
       };
       persistState({ ...state, ...newState });
       return newState;

@@ -29,6 +29,10 @@
   justify-content: center;
 }
 
+.navBtnDisabled {
+  opacity: 0.3;
+}
+
 .navBtnText {
   color: $color-text-white;
   font-size: 32rpx;

@@ -26,16 +26,20 @@ const AppointmentPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [weekStartOffset, setWeekStartOffset] = useState(0);
 
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [rescheduleRemark, setRescheduleRemark] = useState('');
 
   const today = new Date();
+  const DAYS_SHOWN = 30;
   const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
+    const base = new Date(today);
+    base.setDate(today.getDate() + weekStartOffset);
+    return Array.from({ length: DAYS_SHOWN }, (_, i) => {
+      const date = new Date(base);
+      date.setDate(base.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
       const count = appointments.filter((a) => a.date === dateStr).length;
       return {
@@ -45,7 +49,7 @@ const AppointmentPage: React.FC = () => {
         count
       };
     });
-  }, [appointments]);
+  }, [appointments, weekStartOffset]);
 
   const selectedDate = weekDays[selectedDateIndex].date;
 
@@ -94,13 +98,23 @@ const AppointmentPage: React.FC = () => {
     Taro.showToast({ title: '改期成功', icon: 'success' });
     setShowRescheduleModal(false);
 
-    const newDateIdx = weekDays.findIndex((d) => d.date === newDate);
-    if (newDateIdx >= 0 && newDateIdx !== selectedDateIndex) {
-      setTimeout(() => {
-        setSelectedDateIndex(newDateIdx);
-        setStatusFilter('rescheduled');
-      }, 300);
-    }
+    setTimeout(() => {
+      const newDateObj = new Date(newDate.replace(/-/g, '/'));
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
+      const diffDays = Math.floor((newDateObj.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000));
+
+      let targetOffset = weekStartOffset;
+      if (diffDays < weekStartOffset || diffDays >= weekStartOffset + DAYS_SHOWN) {
+        targetOffset = Math.max(0, diffDays - Math.floor(DAYS_SHOWN / 2));
+        setWeekStartOffset(targetOffset);
+      }
+      const relativeIdx = diffDays - targetOffset;
+      if (relativeIdx >= 0 && relativeIdx < DAYS_SHOWN) {
+        setSelectedDateIndex(relativeIdx);
+      }
+      setStatusFilter('rescheduled');
+    }, 300);
 
     setSelectedAppointment(null);
   };
@@ -185,11 +199,27 @@ const AppointmentPage: React.FC = () => {
     <ScrollView scrollY className={styles.page}>
       <View className={styles.dateSection}>
         <View className={styles.dateNav}>
-          <View className={styles.navBtn}>
+          <View
+            className={classnames(styles.navBtn, weekStartOffset === 0 && styles.navBtnDisabled)}
+            onClick={() => {
+              if (weekStartOffset > 0) {
+                setWeekStartOffset(Math.max(0, weekStartOffset - 7));
+                setSelectedDateIndex(Math.min(selectedDateIndex, DAYS_SHOWN - 1));
+              }
+            }}
+          >
             <Text className={styles.navBtnText}>‹</Text>
           </View>
-          <Text className={styles.currentDate}>{currentDateStr}</Text>
-          <View className={styles.navBtn}>
+          <Text className={styles.currentDate}>
+            {weekStartOffset === 0 ? currentDateStr : `${currentDateStr}+${weekStartOffset}天`}
+          </Text>
+          <View
+            className={styles.navBtn}
+            onClick={() => {
+              setWeekStartOffset(weekStartOffset + 7);
+              setSelectedDateIndex(Math.min(selectedDateIndex, DAYS_SHOWN - 1));
+            }}
+          >
             <Text className={styles.navBtnText}>›</Text>
           </View>
         </View>

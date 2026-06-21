@@ -339,7 +339,9 @@ const ReportPage: React.FC = () => {
                   key={a.id}
                   className={styles.rescheduleItem}
                   onClick={() =>
-                    Taro.navigateTo({ url: `/pages/customer-detail/index?id=${a.customerId}` })
+                    Taro.navigateTo({
+                      url: `/pages/customer-detail/index?id=${a.customerId}&appointmentId=${a.id}`
+                    })
                   }
                 >
                   <View className={styles.rescheduleInfo}>
