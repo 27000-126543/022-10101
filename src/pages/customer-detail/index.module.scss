@@ -723,3 +723,49 @@
   background: linear-gradient(135deg, #FFB800 0%, #FF8C00 100%);
   color: $color-text-white;
 }
+
+.appointmentRescheduleRemark {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+.transactionList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.transactionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, #F0FFF4 0%, #E6FFFB 100%);
+  border-radius: $radius-md;
+}
+
+.transactionInfo {
+  flex: 1;
+}
+
+.transactionProject {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+  display: block;
+}
+
+.transactionDate {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  display: block;
+}
+
+.transactionAmount {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-success;
+}

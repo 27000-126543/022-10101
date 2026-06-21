@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import Taro from '@tarojs/taro';
 import {
   Customer,
   CustomerStatus,
@@ -16,6 +17,68 @@ import { mockCustomers } from '@/data/customers';
 import { mockAppointments } from '@/data/appointments';
 import { mockActivities } from '@/data/activities';
 import { mockMessageTemplates } from '@/data/messageTemplates';
+
+const STORAGE_KEY = 'yme_store_v1';
+
+const loadFromStorage = <T>(key: string, fallback: T): T => {
+  try {
+    const raw = Taro.getStorageSync(key);
+    if (raw) {
+      return JSON.parse(raw) as T;
+    }
+  } catch (e) {
+    console.log('[Storage] 读取失败，使用默认数据', e);
+  }
+  return fallback;
+};
+
+const saveToStorage = (data: Partial<PersistedState>) => {
+  try {
+    Taro.setStorageSync(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.log('[Storage] 保存失败', e);
+  }
+};
+
+interface PersistedState {
+  customers: Customer[];
+  appointments: Appointment[];
+  activities: Activity[];
+  transactions: Transaction[];
+  followUpRecords: FollowUpRecord[];
+}
+
+const defaultCustomers = mockCustomers.map((c) => {
+  const schedule = generateFollowSchedule(new Date(c.createdAt.replace(/-/g, '/')));
+  return {
+    ...c,
+    firstConsultReminder: schedule.firstConsultReminder,
+    nextFollowAt: schedule.nextFollowAt,
+    autoWakeupAt: schedule.autoWakeupAt,
+    followStage: schedule.followStage
+  };
+});
+
+const defaultActivities = mockActivities.map((a) => ({
+  ...a,
+  qrUrl: `pages/activity-lead/index?activityId=${a.id}`
+}));
+
+const persisted = loadFromStorage<PersistedState>(STORAGE_KEY, {
+  customers: defaultCustomers,
+  appointments: mockAppointments,
+  activities: defaultActivities,
+  transactions: [],
+  followUpRecords: []
+});
+
+const hasPersistedData = (() => {
+  try {
+    return !!Taro.getStorageSync(STORAGE_KEY);
+  } catch {
+    return false;
+  }
+})();
 
 interface CustomerStore {
   customers: Customer[];
@@ -44,10 +107,8 @@ interface CustomerStore {
   addAppointment: (appointment: Omit<Appointment, 'id' | 'createdAt'>) => string;
   updateAppointmentStatus: (id: string, status: Appointment['status']) => void;
   rescheduleAppointment: (id: string, newDate: string, newTime: string, remark: string) => void;
-  getAppointmentsByCustomer: (customerId: string) => Appointment[];
 
   addFollowUpRecord: (record: Omit<FollowUpRecord, 'id' | 'createdAt' | 'operator'>) => void;
-  getFollowUpRecords: (customerId: string) => FollowUpRecord[];
 
   getCustomersByStatus: (status?: CustomerStatus) => Customer[];
   getTodayTodos: () => TodoItem[];
@@ -63,47 +124,47 @@ interface CustomerStore {
     transactionAmount: number;
   };
   searchCustomers: (keyword: string) => Customer[];
-  getCustomerById: (id: string) => Customer | undefined;
   checkAndUpdateWakeupStatus: () => void;
 }
 
+const persistState = (state: PersistedState) => {
+  saveToStorage({
+    customers: state.customers,
+    appointments: state.appointments,
+    activities: state.activities,
+    transactions: state.transactions,
+    followUpRecords: state.followUpRecords
+  });
+};
+
 export const useCustomerStore = create<CustomerStore>((set, get) => ({
-  customers: mockCustomers.map((c) => {
-    const schedule = generateFollowSchedule(new Date(c.createdAt.replace(/-/g, '/')));
-    return {
-      ...c,
-      firstConsultReminder: schedule.firstConsultReminder,
-      nextFollowAt: schedule.nextFollowAt,
-      autoWakeupAt: schedule.autoWakeupAt,
-      followStage: schedule.followStage
-    };
-  }),
-  appointments: mockAppointments,
-  activities: mockActivities.map((a) => ({
-    ...a,
-    qrUrl: `https://trae.example.com/activity/${a.id}`
-  })),
+  customers: persisted.customers,
+  appointments: persisted.appointments,
+  activities: persisted.activities,
   messageTemplates: mockMessageTemplates,
-  transactions: [],
-  followUpRecords: [],
+  transactions: persisted.transactions,
+  followUpRecords: persisted.followUpRecords,
 
   addCustomer: (customer) => {
     const now = new Date();
     const schedule = generateFollowSchedule(now);
     const id = Date.now().toString();
-    set((state) => ({
-      customers: [
-        {
-          ...customer,
-          id,
-          createdAt: now.toLocaleString('zh-CN'),
-          followCount: 0,
-          ...schedule
-        },
-        ...state.customers
-      ]
-    }));
-    console.log('[CustomerStore] 新增客户:', id, customer.name);
+    set((state) => {
+      const newState = {
+        customers: [
+          {
+            ...customer,
+            id,
+            createdAt: now.toLocaleString('zh-CN'),
+            followCount: 0,
+            ...schedule
+          },
+          ...state.customers
+        ]
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
     return id;
   },
 
@@ -113,30 +174,32 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     const activity = get().activities.find((a) => a.id === data.activityId);
     const id = Date.now().toString();
 
-    set((state) => ({
-      customers: [
-        {
-          id,
-          name: data.name,
-          phone: data.phone,
-          status: 'new',
-          channel: '活动扫码',
-          projectPreference: data.projectPreference,
-          activityId: data.activityId,
-          activityName: activity?.name,
-          createdAt: now.toLocaleString('zh-CN'),
-          followCount: 0,
-          tags: ['活动扫码'],
-          ...schedule
-        },
-        ...state.customers
-      ],
-      activities: state.activities.map((a) =>
-        a.id === data.activityId ? { ...a, customerCount: a.customerCount + 1 } : a
-      )
-    }));
-
-    console.log('[CustomerStore] 活动扫码新增客户:', id, data.name, '活动:', activity?.name);
+    set((state) => {
+      const newState = {
+        customers: [
+          {
+            id,
+            name: data.name,
+            phone: data.phone,
+            status: 'new',
+            channel: '活动扫码',
+            projectPreference: data.projectPreference,
+            activityId: data.activityId,
+            activityName: activity?.name,
+            createdAt: now.toLocaleString('zh-CN'),
+            followCount: 0,
+            tags: ['活动扫码'],
+            ...schedule
+          },
+          ...state.customers
+        ],
+        activities: state.activities.map((a) =>
+          a.id === data.activityId ? { ...a, customerCount: a.customerCount + 1 } : a
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
     return id;
   },
 
@@ -147,27 +210,33 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
       ? calculateNextFollowUp(new Date(customer.lastFollowAt.replace(/-/g, '/')), (customer.followStage || 1) + 1)
       : undefined;
 
-    set((state) => ({
-      customers: state.customers.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              status,
-              lastFollowAt: now.toLocaleString('zh-CN'),
-              nextFollowAt,
-              followStage: (c.followStage || 1) + 1
-            }
-          : c
-      )
-    }));
-    console.log('[CustomerStore] 更新客户状态:', id, status);
+    set((state) => {
+      const newState = {
+        customers: state.customers.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                status,
+                lastFollowAt: now.toLocaleString('zh-CN'),
+                nextFollowAt,
+                followStage: (c.followStage || 1) + 1
+              }
+            : c
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   updateCustomer: (id, updates) => {
-    set((state) => ({
-      customers: state.customers.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    }));
-    console.log('[CustomerStore] 更新客户信息:', id, updates);
+    set((state) => {
+      const newState = {
+        customers: state.customers.map((c) => (c.id === id ? { ...c, ...updates } : c))
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   recordFollowUp: (customerId, type, content) => {
@@ -176,32 +245,33 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     const followStage = (customer?.followStage || 1) + 1;
     const nextFollowAt = calculateNextFollowUp(now, followStage);
 
-    set((state) => ({
-      followUpRecords: [
-        {
-          id: Date.now().toString(),
-          customerId,
-          type,
-          content,
-          createdAt: now.toLocaleString('zh-CN'),
-          operator: '咨询顾问小美'
-        },
-        ...state.followUpRecords
-      ],
-      customers: state.customers.map((c) =>
-        c.id === customerId
-          ? {
-              ...c,
-              lastFollowAt: now.toLocaleString('zh-CN'),
-              nextFollowAt,
-              followCount: c.followCount + 1,
-              followStage,
-              status: c.status === 'new' ? 'contacted' : c.status
-            }
-          : c
-      )
-    }));
-    console.log('[CustomerStore] 记录跟进:', customerId, type);
+    set((state) => {
+      const newRecord: FollowUpRecord = {
+        id: Date.now().toString(),
+        customerId,
+        type,
+        content,
+        createdAt: now.toLocaleString('zh-CN'),
+        operator: '咨询顾问小美'
+      };
+      const newState = {
+        followUpRecords: [newRecord, ...state.followUpRecords],
+        customers: state.customers.map((c) =>
+          c.id === customerId
+            ? {
+                ...c,
+                lastFollowAt: now.toLocaleString('zh-CN'),
+                nextFollowAt,
+                followCount: c.followCount + 1,
+                followStage,
+                status: c.status === 'new' ? 'contacted' : c.status
+              }
+            : c
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   bindReferrer: (customerId, referrerName, referrerPhone) => {
@@ -209,61 +279,70 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
       (c) => c.name === referrerName || c.phone === referrerPhone
     );
 
-    set((state) => ({
-      customers: state.customers.map((c) =>
-        c.id === customerId
-          ? {
-              ...c,
-              referrerId: referrer?.id,
-              referrerName,
-              referrerPhone,
-              tags: [...c.tags, '转介绍']
-            }
-          : c
-      )
-    }));
-    console.log('[CustomerStore] 绑定推荐人:', customerId, referrerName);
+    set((state) => {
+      const newState = {
+        customers: state.customers.map((c) =>
+          c.id === customerId
+            ? {
+                ...c,
+                referrerId: referrer?.id,
+                referrerName,
+                referrerPhone,
+                tags: c.tags.includes('转介绍') ? c.tags : [...c.tags, '转介绍']
+              }
+            : c
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   addTransaction: (transaction) => {
     const now = new Date();
-    set((state) => ({
-      transactions: [
-        {
-          ...transaction,
-          id: Date.now().toString(),
-          date: now.toLocaleString('zh-CN')
-        },
-        ...state.transactions
-      ],
-      customers: state.customers.map((c) =>
-        c.id === transaction.customerId
-          ? {
-              ...c,
-              totalConsumption: (c.totalConsumption || 0) + transaction.amount,
-              isVip: (c.totalConsumption || 0) + transaction.amount >= 5000 ? true : c.isVip
-            }
-          : c
-      )
-    }));
-    console.log('[CustomerStore] 新增成交记录:', transaction.customerName, transaction.amount);
+    set((state) => {
+      const newState = {
+        transactions: [
+          {
+            ...transaction,
+            id: Date.now().toString(),
+            date: now.toLocaleString('zh-CN')
+          },
+          ...state.transactions
+        ],
+        customers: state.customers.map((c) =>
+          c.id === transaction.customerId
+            ? {
+                ...c,
+                totalConsumption: (c.totalConsumption || 0) + transaction.amount,
+                isVip: (c.totalConsumption || 0) + transaction.amount >= 5000 ? true : c.isVip
+              }
+            : c
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   addActivity: (activity) => {
     const id = Date.now().toString();
-    set((state) => ({
-      activities: [
-        {
-          ...activity,
-          id,
-          createdAt: new Date().toLocaleDateString('zh-CN'),
-          customerCount: 0,
-          qrUrl: `https://trae.example.com/activity/${id}`
-        },
-        ...state.activities
-      ]
-    }));
-    console.log('[CustomerStore] 新增活动:', id, activity.name);
+    set((state) => {
+      const newState = {
+        activities: [
+          {
+            ...activity,
+            id,
+            createdAt: new Date().toLocaleDateString('zh-CN'),
+            customerCount: 0,
+            qrUrl: `pages/activity-lead/index?activityId=${id}`
+          },
+          ...state.activities
+        ]
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
     return id;
   },
 
@@ -273,80 +352,83 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
 
   addAppointment: (appointment) => {
     const id = Date.now().toString();
-    set((state) => ({
-      appointments: [
-        {
-          ...appointment,
-          id,
-          createdAt: new Date().toLocaleString('zh-CN'),
-          rescheduleCount: 0
-        },
-        ...state.appointments
-      ],
-      customers: state.customers.map((c) =>
-        c.id === appointment.customerId && c.status !== 'pending'
-          ? { ...c, status: 'pending' as CustomerStatus }
-          : c
-      )
-    }));
-    console.log('[CustomerStore] 新增预约:', id, appointment.customerName, appointment.date);
+    set((state) => {
+      const newState = {
+        appointments: [
+          {
+            ...appointment,
+            id,
+            createdAt: new Date().toLocaleString('zh-CN'),
+            rescheduleCount: 0
+          },
+          ...state.appointments
+        ],
+        customers: state.customers.map((c) =>
+          c.id === appointment.customerId && c.status !== 'pending'
+            ? { ...c, status: 'pending' as CustomerStatus }
+            : c
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
     return id;
   },
 
   updateAppointmentStatus: (id, status) => {
-    set((state) => ({
-      appointments: state.appointments.map((a) => (a.id === id ? { ...a, status } : a))
-    }));
-    console.log('[CustomerStore] 更新预约状态:', id, status);
+    set((state) => {
+      const newState = {
+        appointments: state.appointments.map((a) => (a.id === id ? { ...a, status } : a))
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   rescheduleAppointment: (id, newDate, newTime, remark) => {
     const appointment = get().appointments.find((a) => a.id === id);
     if (!appointment) return;
 
-    set((state) => ({
-      appointments: state.appointments.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              date: newDate,
-              time: newTime,
-              status: 'rescheduled',
-              originalDate: a.originalDate || a.date,
-              originalTime: a.originalTime || a.time,
-              rescheduleRemark: remark,
-              rescheduleCount: (a.rescheduleCount || 0) + 1,
-              remark: a.remark ? `${a.remark} | 改期: ${remark}` : `改期: ${remark}`
-            }
-          : a
-      )
-    }));
-    console.log('[CustomerStore] 预约改期:', id, '新时间:', newDate, newTime);
-  },
-
-  getAppointmentsByCustomer: (customerId) => {
-    return get().appointments.filter((a) => a.customerId === customerId);
+    set((state) => {
+      const newState = {
+        appointments: state.appointments.map((a) =>
+          a.id === id
+            ? {
+                ...a,
+                date: newDate,
+                time: newTime,
+                status: 'rescheduled',
+                originalDate: a.originalDate || a.date,
+                originalTime: a.originalTime || a.time,
+                rescheduleRemark: remark,
+                rescheduleCount: (a.rescheduleCount || 0) + 1,
+                remark: a.remark ? `${a.remark} | 改期: ${remark}` : `改期: ${remark}`
+              }
+            : a
+        )
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   addFollowUpRecord: (record) => {
     const now = new Date();
-    set((state) => ({
-      followUpRecords: [
-        {
-          ...record,
-          id: Date.now().toString(),
-          createdAt: now.toLocaleString('zh-CN'),
-          operator: '咨询顾问小美'
-        },
-        ...state.followUpRecords
-      ]
-    }));
-  },
-
-  getFollowUpRecords: (customerId) => {
-    return get().followUpRecords
-      .filter((r) => r.customerId === customerId)
-      .sort((a, b) => new Date(b.createdAt.replace(/-/g, '/')).getTime() - new Date(a.createdAt.replace(/-/g, '/')).getTime());
+    set((state) => {
+      const newState = {
+        followUpRecords: [
+          {
+            ...record,
+            id: Date.now().toString(),
+            createdAt: now.toLocaleString('zh-CN'),
+            operator: '咨询顾问小美'
+          },
+          ...state.followUpRecords
+        ]
+      };
+      persistState({ ...state, ...newState });
+      return newState;
+    });
   },
 
   getCustomersByStatus: (status) => {
@@ -359,7 +441,6 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     const { customers, appointments } = get();
     const todos: TodoItem[] = [];
     const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
 
     customers.forEach((c) => {
       if (c.status === 'new') {
@@ -483,18 +564,12 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     );
   },
 
-  getCustomerById: (id) => {
-    return get().customers.find((c) => c.id === id);
-  },
-
   checkAndUpdateWakeupStatus: () => {
     const { customers } = get();
-    const now = new Date();
 
     const updatedCustomers = customers.map((c) => {
       if (c.status === 'new' || c.status === 'contacted') {
         if (shouldWakeUp(c.lastFollowAt, c.nextFollowAt)) {
-          console.log('[CustomerStore] 自动标记需唤醒:', c.name);
           return { ...c, status: 'wakeup' as CustomerStatus };
         }
       }
@@ -503,7 +578,11 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
 
     const hasChanges = updatedCustomers.some((c, i) => c.status !== customers[i].status);
     if (hasChanges) {
-      set({ customers: updatedCustomers });
+      set((state) => {
+        const newState = { customers: updatedCustomers };
+        persistState({ ...state, ...newState });
+        return newState;
+      });
     }
   }
 }));

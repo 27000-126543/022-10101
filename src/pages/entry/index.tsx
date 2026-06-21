@@ -272,9 +272,12 @@ const EntryPage: React.FC = () => {
               <Text className={styles.qrCodeText}>📱</Text>
             </View>
             <View className={styles.qrUrlBox}>
-              <Text className={styles.qrUrlLabel}>扫码链接：</Text>
+              <Text className={styles.qrUrlLabel}>小程序页面路径：</Text>
               <Text className={styles.qrUrl} selectable>
                 {activities.find((a) => a.id === showQr)?.qrUrl}
+              </Text>
+              <Text className={styles.qrUrlHint}>
+                顾客打开小程序后自动跳转到此页面填写信息
               </Text>
             </View>
             <View className={styles.qrActionBtns}>

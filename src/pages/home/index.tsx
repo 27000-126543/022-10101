@@ -9,13 +9,116 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 
 const HomePage: React.FC = () => {
-  const { getDailyStats, getTodayTodos, customers, checkAndUpdateWakeupStatus, transactions } = useCustomerStore();
-  const stats = useMemo(() => getDailyStats(), [getDailyStats]);
-  const todos = useMemo(() => getTodayTodos(), [getTodayTodos]);
+  const customers = useCustomerStore((s) => s.customers);
+  const appointments = useCustomerStore((s) => s.appointments);
+  const transactions = useCustomerStore((s) => s.transactions);
+  const checkAndUpdateWakeupStatus = useCustomerStore((s) => s.checkAndUpdateWakeupStatus);
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+
+  const stats = useMemo(() => {
+    const todayTransactions = transactions.filter(
+      (t) => new Date(t.date.replace(/-/g, '/')).toISOString().split('T')[0] === todayStr
+    );
+    return {
+      newLeads: customers.filter((c) => c.status === 'new').length,
+      contacted: customers.filter((c) => c.status === 'contacted').length,
+      pending: customers.filter((c) => c.status === 'pending').length,
+      wakeup: customers.filter((c) => c.status === 'wakeup').length,
+      todayAppointments: appointments.filter((a) => a.date === todayStr).length,
+      pendingFollow: customers.filter((c) => c.status === 'new' || c.status === 'wakeup').length,
+      rescheduledCount: appointments.filter((a) => a.status === 'rescheduled').length,
+      transactionCount: todayTransactions.length,
+      transactionAmount: todayTransactions.reduce((sum, t) => sum + t.amount, 0)
+    };
+  }, [customers, appointments, transactions, todayStr]);
+
+  const todos = useMemo(() => {
+    const todosList: Array<{
+      id: string;
+      type: string;
+      customerId: string;
+      customerName: string;
+      content: string;
+      priority: string;
+      time?: string;
+    }> = [];
+
+    customers.forEach((c) => {
+      if (c.status === 'new') {
+        todosList.push({
+          id: `new-${c.id}`,
+          type: 'follow',
+          customerId: c.id,
+          customerName: c.name,
+          content: `首咨提醒：${c.name} - ${c.projectPreference.join('、')}`,
+          priority: 'high',
+          time: c.firstConsultReminder?.split(' ')[1]
+        });
+      }
+      if (c.status === 'wakeup') {
+        todosList.push({
+          id: `wakeup-${c.id}`,
+          type: 'wakeup',
+          customerId: c.id,
+          customerName: c.name,
+          content: `二次唤醒：${c.name} 已${c.followCount}次跟进未回复`,
+          priority: 'high'
+        });
+      }
+      if (c.nextFollowAt) {
+        const nextFollowDate = new Date(c.nextFollowAt.replace(/-/g, '/'));
+        if (nextFollowDate.toISOString().split('T')[0] === todayStr) {
+          todosList.push({
+            id: `next-${c.id}`,
+            type: 'follow',
+            customerId: c.id,
+            customerName: c.name,
+            content: `跟进提醒：${c.name} 计划跟进时间`,
+            priority: 'medium',
+            time: c.nextFollowAt.split(' ')[1]
+          });
+        }
+      }
+    });
+
+    appointments
+      .filter((a) => a.date === todayStr && a.status !== 'arrived' && a.status !== 'cancelled')
+      .forEach((a) => {
+        todosList.push({
+          id: `appt-${a.id}`,
+          type: 'appointment',
+          customerId: a.customerId,
+          customerName: a.customerName,
+          content: `待接诊：${a.customerName} ${a.time} ${a.project}`,
+          priority: a.status === 'confirmed' ? 'high' : 'medium',
+          time: a.time
+        });
+      });
+
+    appointments
+      .filter((a) => a.status === 'rescheduled')
+      .forEach((a) => {
+        todosList.push({
+          id: `resched-${a.id}`,
+          type: 'reschedule',
+          customerId: a.customerId,
+          customerName: a.customerName,
+          content: `改期待确认：${a.customerName} 原${a.originalDate} 改至${a.date}`,
+          priority: 'medium'
+        });
+      });
+
+    return todosList.sort((a, b) => {
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  }, [customers, appointments, todayStr]);
+
   const newCustomers = useMemo(() => customers.filter(c => c.status === 'new').slice(0, 3), [customers]);
 
   useDidShow(() => {
-    console.log('[HomePage] 页面显示，检查需唤醒客户...');
     checkAndUpdateWakeupStatus();
   });
 
@@ -27,7 +130,6 @@ const HomePage: React.FC = () => {
     return () => clearInterval(timer);
   }, [checkAndUpdateWakeupStatus]);
 
-  const today = new Date();
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
   const weekdayStr = weekdays[today.getDay()];

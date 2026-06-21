@@ -377,6 +377,13 @@
   line-height: 1.5;
 }
 
+.qrUrlHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
 .qrActionBtns {
   display: flex;
   gap: $spacing-md;

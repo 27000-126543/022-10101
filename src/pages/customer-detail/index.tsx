@@ -2,28 +2,48 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, Input, ScrollView, Picker } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
-import { STATUS_LABELS, CustomerStatus, STATUS_COLORS, PROJECT_OPTIONS, TIME_SLOTS } from '@/types';
+import { STATUS_LABELS, CustomerStatus, PROJECT_OPTIONS, TIME_SLOTS } from '@/types';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 
 const CustomerDetailPage: React.FC = () => {
   const router = useRouter();
-  const {
-    getCustomerById,
-    updateCustomerStatus,
-    addAppointment,
-    getAppointmentsByCustomer,
-    getFollowUpRecords,
-    addTransaction,
-    bindReferrer,
-    recordFollowUp,
-    updateCustomer
-  } = useCustomerStore();
   const customerId = router.params.id!;
 
-  const customer = useMemo(() => getCustomerById(customerId), [getCustomerById, customerId]);
-  const appointments = useMemo(() => getAppointmentsByCustomer(customerId), [getAppointmentsByCustomer, customerId]);
-  const followUpRecords = useMemo(() => getFollowUpRecords(customerId), [getFollowUpRecords, customerId]);
+  const storeCustomers = useCustomerStore((s) => s.customers);
+  const storeAppointments = useCustomerStore((s) => s.appointments);
+  const storeFollowUpRecords = useCustomerStore((s) => s.followUpRecords);
+  const storeTransactions = useCustomerStore((s) => s.transactions);
+
+  const updateCustomerStatus = useCustomerStore((s) => s.updateCustomerStatus);
+  const addAppointment = useCustomerStore((s) => s.addAppointment);
+  const addTransaction = useCustomerStore((s) => s.addTransaction);
+  const bindReferrer = useCustomerStore((s) => s.bindReferrer);
+  const recordFollowUp = useCustomerStore((s) => s.recordFollowUp);
+  const updateCustomer = useCustomerStore((s) => s.updateCustomer);
+
+  const customer = useMemo(
+    () => storeCustomers.find((c) => c.id === customerId),
+    [storeCustomers, customerId]
+  );
+
+  const appointments = useMemo(
+    () => storeAppointments.filter((a) => a.customerId === customerId),
+    [storeAppointments, customerId]
+  );
+
+  const followUpRecords = useMemo(
+    () =>
+      storeFollowUpRecords
+        .filter((r) => r.customerId === customerId)
+        .sort((a, b) => new Date(b.createdAt.replace(/-/g, '/')).getTime() - new Date(a.createdAt.replace(/-/g, '/')).getTime()),
+    [storeFollowUpRecords, customerId]
+  );
+
+  const customerTransactions = useMemo(
+    () => storeTransactions.filter((t) => t.customerId === customerId),
+    [storeTransactions, customerId]
+  );
 
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -341,15 +361,39 @@ const CustomerDetailPage: React.FC = () => {
                     </View>
                     {appt.originalDate && (
                       <Text className={styles.appointmentOriginal}>
-                        原预约：{appt.originalDate} {appt.originalTime}
+                        原预约：{formatDate(appt.originalDate)} {appt.originalTime}
                       </Text>
                     )}
-                    {appt.remark && (
+                    {appt.rescheduleRemark && (
+                      <Text className={styles.appointmentRescheduleRemark}>
+                        改期原因：{appt.rescheduleRemark}
+                      </Text>
+                    )}
+                    {appt.remark && !appt.rescheduleRemark && (
                       <Text className={styles.appointmentRemark}>备注：{appt.remark}</Text>
                     )}
                   </View>
                 );
               })}
+            </View>
+          </View>
+        )}
+
+        {customerTransactions.length > 0 && (
+          <View className={styles.card}>
+            <Text className={styles.cardTitle}>
+              <Text className={styles.titleIcon}>💰</Text>成交记录
+            </Text>
+            <View className={styles.transactionList}>
+              {customerTransactions.map((t) => (
+                <View key={t.id} className={styles.transactionItem}>
+                  <View className={styles.transactionInfo}>
+                    <Text className={styles.transactionProject}>{t.project}</Text>
+                    <Text className={styles.transactionDate}>{t.date}</Text>
+                  </View>
+                  <Text className={styles.transactionAmount}>¥{t.amount}</Text>
+                </View>
+              ))}
             </View>
           </View>
         )}

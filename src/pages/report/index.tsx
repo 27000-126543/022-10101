@@ -7,25 +7,36 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 
 const ReportPage: React.FC = () => {
-  const { customers, getDailyStats, getTodayTodos, appointments, transactions } = useCustomerStore();
-  const stats = useMemo(() => getDailyStats(), [getDailyStats]);
-  const todos = useMemo(() => getTodayTodos(), [getTodayTodos]);
+  const customers = useCustomerStore((s) => s.customers);
+  const appointments = useCustomerStore((s) => s.appointments);
+  const transactions = useCustomerStore((s) => s.transactions);
 
   const today = new Date();
   const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
   const todayStr = today.toISOString().split('T')[0];
 
-  const channelStats = useMemo(() => {
-    const map: Record<string, number> = {};
-    customers.forEach((c) => {
-      map[c.channel] = (map[c.channel] || 0) + 1;
-    });
-    const arr = Object.entries(map)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-    const max = Math.max(...arr.map((a) => a.count), 1);
-    return arr.map((a) => ({ ...a, percent: (a.count / max) * 100 }));
-  }, [customers]);
+  const stats = useMemo(() => {
+    const todayTransactions = transactions.filter(
+      (t) => new Date(t.date.replace(/-/g, '/')).toISOString().split('T')[0] === todayStr
+    );
+    return {
+      newLeads: customers.filter((c) => c.status === 'new').length,
+      contacted: customers.filter((c) => c.status === 'contacted').length,
+      pending: customers.filter((c) => c.status === 'pending').length,
+      wakeup: customers.filter((c) => c.status === 'wakeup').length,
+      todayAppointments: appointments.filter((a) => a.date === todayStr).length,
+      pendingFollow: customers.filter((c) => c.status === 'new' || c.status === 'wakeup').length,
+      rescheduledCount: appointments.filter((a) => a.status === 'rescheduled').length,
+      transactionCount: todayTransactions.length,
+      transactionAmount: todayTransactions.reduce((sum, t) => sum + t.amount, 0)
+    };
+  }, [customers, appointments, transactions, todayStr]);
+
+  const todayTransactions = useMemo(() => {
+    return transactions.filter(
+      (t) => new Date(t.date.replace(/-/g, '/')).toISOString().split('T')[0] === todayStr
+    );
+  }, [transactions, todayStr]);
 
   const stuckCustomers = useMemo(() => {
     return customers
@@ -49,19 +60,115 @@ const ReportPage: React.FC = () => {
         name: a.customerName,
         originalDate: a.originalDate || a.date,
         newDate: a.date,
+        newTime: a.time,
         remark: a.rescheduleRemark || '客户改期'
       }));
   }, [appointments]);
 
-  const todayTransactions = useMemo(() => {
-    return transactions.filter(
-      (t) => new Date(t.date.replace(/-/g, '/')).toISOString().split('T')[0] === todayStr
-    );
-  }, [transactions, todayStr]);
+  const channelStats = useMemo(() => {
+    const map: Record<string, number> = {};
+    customers.forEach((c) => {
+      map[c.channel] = (map[c.channel] || 0) + 1;
+    });
+    const arr = Object.entries(map)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+    const max = Math.max(...arr.map((a) => a.count), 1);
+    return arr.map((a) => ({ ...a, percent: (a.count / max) * 100 }));
+  }, [customers]);
+
+  const todos = useMemo(() => {
+    const todosList: Array<{
+      id: string;
+      type: string;
+      customerId: string;
+      customerName: string;
+      content: string;
+      priority: string;
+      time?: string;
+    }> = [];
+
+    customers.forEach((c) => {
+      if (c.status === 'new') {
+        todosList.push({
+          id: `new-${c.id}`,
+          type: 'follow',
+          customerId: c.id,
+          customerName: c.name,
+          content: `首咨提醒：${c.name} - ${c.projectPreference.join('、')}`,
+          priority: 'high',
+          time: c.firstConsultReminder?.split(' ')[1]
+        });
+      }
+      if (c.status === 'wakeup') {
+        todosList.push({
+          id: `wakeup-${c.id}`,
+          type: 'wakeup',
+          customerId: c.id,
+          customerName: c.name,
+          content: `二次唤醒：${c.name} 已${c.followCount}次跟进未回复`,
+          priority: 'high'
+        });
+      }
+      if (c.nextFollowAt) {
+        const nextFollowDate = new Date(c.nextFollowAt.replace(/-/g, '/'));
+        if (nextFollowDate.toISOString().split('T')[0] === todayStr) {
+          todosList.push({
+            id: `next-${c.id}`,
+            type: 'follow',
+            customerId: c.id,
+            customerName: c.name,
+            content: `跟进提醒：${c.name} 计划跟进时间`,
+            priority: 'medium',
+            time: c.nextFollowAt.split(' ')[1]
+          });
+        }
+      }
+    });
+
+    appointments
+      .filter((a) => a.date === todayStr && a.status !== 'arrived' && a.status !== 'cancelled')
+      .forEach((a) => {
+        todosList.push({
+          id: `appt-${a.id}`,
+          type: 'appointment',
+          customerId: a.customerId,
+          customerName: a.customerName,
+          content: `待接诊：${a.customerName} ${a.time} ${a.project}`,
+          priority: a.status === 'confirmed' ? 'high' : 'medium',
+          time: a.time
+        });
+      });
+
+    appointments
+      .filter((a) => a.status === 'rescheduled')
+      .forEach((a) => {
+        todosList.push({
+          id: `resched-${a.id}`,
+          type: 'reschedule',
+          customerId: a.customerId,
+          customerName: a.customerName,
+          content: `改期待确认：${a.customerName} 原${a.originalDate} 改至${a.date}`,
+          priority: 'medium'
+        });
+      });
+
+    return todosList.sort((a, b) => {
+      const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  }, [customers, appointments, todayStr]);
 
   const todayArrived = appointments.filter(
     (a) => a.date === todayStr && a.status === 'arrived'
   ).length;
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr.replace(/-/g, '/'));
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}月${day}日`;
+  };
 
   return (
     <ScrollView scrollY className={styles.page}>
@@ -118,7 +225,13 @@ const ReportPage: React.FC = () => {
             </View>
             <View className={styles.transactionList}>
               {todayTransactions.map((t) => (
-                <View key={t.id} className={styles.transactionItem}>
+                <View
+                  key={t.id}
+                  className={styles.transactionItem}
+                  onClick={() =>
+                    Taro.navigateTo({ url: `/pages/customer-detail/index?id=${t.customerId}` })
+                  }
+                >
                   <View className={styles.transactionInfo}>
                     <Text className={styles.transactionName}>{t.customerName}</Text>
                     <Text className={styles.transactionProject}>{t.project}</Text>
@@ -232,7 +345,7 @@ const ReportPage: React.FC = () => {
                   <View className={styles.rescheduleInfo}>
                     <Text className={styles.rescheduleName}>{a.name}</Text>
                     <Text className={styles.rescheduleDate}>
-                      原 {a.originalDate} → {a.newDate}
+                      原 {formatDate(a.originalDate)} → {formatDate(a.newDate)} {a.newTime}
                     </Text>
                     <Text className={styles.rescheduleReason}>原因：{a.remark}</Text>
                   </View>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Input, Picker } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
-import { Appointment, TIME_SLOTS, PROJECT_OPTIONS } from '@/types';
+import { Appointment, TIME_SLOTS } from '@/types';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 
@@ -17,7 +17,11 @@ const statusLabels: Record<Appointment['status'], string> = {
 };
 
 const AppointmentPage: React.FC = () => {
-  const { appointments, updateAppointmentStatus, rescheduleAppointment, getCustomerById } = useCustomerStore();
+  const appointments = useCustomerStore((s) => s.appointments);
+  const storeCustomers = useCustomerStore((s) => s.customers);
+  const updateAppointmentStatus = useCustomerStore((s) => s.updateAppointmentStatus);
+  const rescheduleAppointment = useCustomerStore((s) => s.rescheduleAppointment);
+
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -41,7 +45,7 @@ const AppointmentPage: React.FC = () => {
         count
       };
     });
-  }, [appointments, today]);
+  }, [appointments]);
 
   const selectedDate = weekDays[selectedDateIndex].date;
 
@@ -89,16 +93,25 @@ const AppointmentPage: React.FC = () => {
     rescheduleAppointment(selectedAppointment.id, newDate, newTime, rescheduleRemark.trim());
     Taro.showToast({ title: '改期成功', icon: 'success' });
     setShowRescheduleModal(false);
+
+    const newDateIdx = weekDays.findIndex((d) => d.date === newDate);
+    if (newDateIdx >= 0 && newDateIdx !== selectedDateIndex) {
+      setTimeout(() => {
+        setSelectedDateIndex(newDateIdx);
+        setStatusFilter('rescheduled');
+      }, 300);
+    }
+
     setSelectedAppointment(null);
   };
 
   const handleAction = (appointment: Appointment, action: string) => {
+    const customer = storeCustomers.find((c) => c.id === appointment.customerId);
     switch (action) {
       case 'arrive':
         updateAppointmentStatus(appointment.id, 'arrived');
-        const customer = getCustomerById(appointment.customerId);
         if (customer && customer.status !== 'pending') {
-          console.log('[Appointment] 客户到院，状态更新为待到院');
+          console.log('[Appointment] 客户到院，状态更新');
         }
         Taro.showToast({ title: '签到成功', icon: 'success' });
         break;
@@ -258,7 +271,14 @@ const AppointmentPage: React.FC = () => {
                       🔄 改期：原{formatDate(appt.originalDate)} → {formatDate(appt.date)}
                     </Text>
                   )}
-                  {appt.remark && <Text className={styles.remarkText}>备注：{appt.remark}</Text>}
+                  {appt.rescheduleRemark && (
+                    <Text className={styles.rescheduleRemarkText}>
+                      改期原因：{appt.rescheduleRemark}
+                    </Text>
+                  )}
+                  {appt.remark && !appt.rescheduleRemark && (
+                    <Text className={styles.remarkText}>备注：{appt.remark}</Text>
+                  )}
                 </View>
 
                 <View className={styles.actionRow}>

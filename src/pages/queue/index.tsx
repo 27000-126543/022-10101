@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useCustomerStore } from '@/store/customerStore';
-import { CustomerStatus, STATUS_LABELS, STATUS_COLORS } from '@/types';
+import { CustomerStatus, STATUS_LABELS } from '@/types';
 import CustomerCard from '@/components/CustomerCard';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -10,15 +10,23 @@ import styles from './index.module.scss';
 type FilterType = 'all' | CustomerStatus;
 
 const QueuePage: React.FC = () => {
-  const { customers, getDailyStats, searchCustomers, checkAndUpdateWakeupStatus } = useCustomerStore();
+  const customers = useCustomerStore((s) => s.customers);
+  const checkAndUpdateWakeupStatus = useCustomerStore((s) => s.checkAndUpdateWakeupStatus);
+
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [showSearchInput, setShowSearchInput] = useState(false);
 
-  const stats = useMemo(() => getDailyStats(), [getDailyStats]);
+  const stats = useMemo(() => {
+    return {
+      newLeads: customers.filter((c) => c.status === 'new').length,
+      contacted: customers.filter((c) => c.status === 'contacted').length,
+      pending: customers.filter((c) => c.status === 'pending').length,
+      wakeup: customers.filter((c) => c.status === 'wakeup').length,
+    };
+  }, [customers]);
 
   useDidShow(() => {
-    console.log('[QueuePage] 页面显示，检查需唤醒客户...');
     checkAndUpdateWakeupStatus();
   });
 
@@ -35,12 +43,22 @@ const QueuePage: React.FC = () => {
   ];
 
   const filteredCustomers = useMemo(() => {
-    let result = searchKeyword ? searchCustomers(searchKeyword) : customers;
+    let result = customers;
+    if (searchKeyword) {
+      const kw = searchKeyword.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(kw) ||
+          c.phone.includes(kw) ||
+          c.projectPreference.some((p) => p.includes(kw)) ||
+          (c.referrerName && c.referrerName.includes(kw))
+      );
+    }
     if (activeFilter !== 'all') {
       result = result.filter((c) => c.status === activeFilter);
     }
     return result;
-  }, [customers, activeFilter, searchKeyword, searchCustomers]);
+  }, [customers, activeFilter, searchKeyword]);
 
   const handleFilterClick = (key: FilterType) => {
     setActiveFilter(key);
